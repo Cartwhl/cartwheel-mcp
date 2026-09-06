@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.tgz
+*.blend1
+.DS_Store
+examples/blender/frames/
+examples/blender/garden/
+examples/blender/moon/
+examples/blender/*.blend
+examples/blender/*.png
+examples/blender/*.mp4
+examples/blender/*.wav
+__pycache__/

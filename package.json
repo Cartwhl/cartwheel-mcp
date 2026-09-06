@@ -1,0 +1,42 @@
+{
+  "name": "@cartwhl/mcp-server",
+  "version": "0.1.0",
+  "description": "Generate 3D animation with Cartwheel from MCP clients.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "cartwheel-mcp": "src/index.mjs"
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.mjs",
+    "test": "node --test",
+    "check:package": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cartwhl/cartwheel-mcp.git"
+  },
+  "homepage": "https://github.com/Cartwhl/cartwheel-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Cartwhl/cartwheel-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "cartwheel",
+    "animation",
+    "blender",
+    "motion-capture"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "ajv": "^8.20.0"
+  }
+}
