@@ -31,9 +31,10 @@ test('only the production origin receives credentials', async t => {
   assert.equal(seen[0].options.redirect,'error');
 });
 
-test('package allowlist excludes credentials and demo assets', () => {
+test('package allowlist includes workflow sources and excludes secrets and rendered outputs', () => {
   const manifest=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
-  assert.deepEqual(manifest.files,['src','LICENSE','README.md']);
+  assert.deepEqual(manifest.files,['src','LICENSE','README.md','examples/blender/*.py','examples/blender/README.md','examples/blender/assets/*.bvh']);
   const [pack]=JSON.parse(execFileSync('npm',['pack','--dry-run','--json','--ignore-scripts'],{cwd:new URL('../',import.meta.url),encoding:'utf8'}));
-  for(const file of pack.files) assert.ok(/^(src\/|LICENSE$|README.md$|package.json$)/.test(file.path),file.path);
+  for(const file of pack.files) assert.ok(/^(src\/|LICENSE$|README.md$|package.json$|examples\/blender\/[^/]+\.py$|examples\/blender\/README\.md$|examples\/blender\/assets\/[^/]+\.bvh$)/.test(file.path),file.path);
+  for (const path of ['src/workflows/blender.md','examples/blender/motion.py','examples/blender/verify_motion.py','examples/blender/assets/dance_0.bvh']) assert.ok(pack.files.some(file => file.path === path), path);
 });

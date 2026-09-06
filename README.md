@@ -6,7 +6,7 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 
 [![After Hours — generated motion rendered in Blender](docs/media/after-hours.gif)](docs/media/after-hours.mp4)
 
-[Watch the Blender demo](docs/media/after-hours.mp4) · [Production setup walkthrough](docs/SETUP.md) · [More Blender examples](examples/blender/README.md)
+[Watch the Blender demo](docs/media/after-hours.mp4) · [Production setup walkthrough](docs/SETUP.md) · [MCP Blender workflow](#default-blender-workflow-in-mcp) · [More Blender examples](examples/blender/README.md)
 
 ## What you need
 
@@ -119,6 +119,22 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 
 List pagination uses `nextToken`. Search requires `pageSize` and uses the response's `lastSort` array as `searchAfter`.
 
+## Default Blender workflow in MCP
+
+The server exposes the approved grounding and rendering process directly through MCP:
+
+- **Prompt:** `grounded_blender_scene`, with an optional `scene` description.
+- **Resource:** `cartwheel://workflows/blender`.
+- **Bundled files:** Blender scripts, validation, and all four generated example motions under `examples/blender/`.
+
+Choose the prompt in a client that supports MCP prompts, or ask your assistant:
+
+> Use Cartwheel's grounded Blender workflow to make a playful robot scene. Start with a motion preview, check foot contact and pose continuity, then render the final movie.
+
+The server instructions direct Blender requests to this workflow. The [complete guide](src/workflows/blender.md) covers generation, preserved root travel, Gaussian contact easing, stable knee IK, continuous foot yaw, validation, and final rendering. The example driver runs the contact and continuity checks before rendering movies. Your MCP client's authorized local tools run Blender and handle files.
+
+After updating this repository, restart or reconnect the MCP server so your client discovers the new prompt and resource.
+
 ## Blender gallery
 
 The examples use Cartwheel-generated BVH motion, procedural characters and sets, and Blender Cycles rendering. The scene source and original music are included.
@@ -135,7 +151,7 @@ The examples use Cartwheel-generated BVH motion, procedural characters and sets,
 
 See [the Blender guide](examples/blender/README.md) for source files, rendering instructions, and motion provenance.
 
-**Paths and poses:** `generate_motion` exposes the documented text-generation API. It does not promise path or pose conditioning. In Moon Mail, Blender places the generated walking performance along a curve and turns the character along its tangent. That changes scene placement; it is not a constraint sent to the motion model.
+**Paths and poses:** `generate_motion` exposes the documented text-generation API. It does not promise path or pose conditioning. In Moon Mail, Blender advances the generated walking performance along a curve at the source stride speed, turns the character along its tangent, and solves planted-foot contact on the flat floor. That changes scene placement; it is not a constraint sent to the motion model.
 
 ## Security and scope
 
@@ -168,7 +184,7 @@ npm test
 npm pack --dry-run
 ```
 
-Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate discovery, request schemas, authentication, pagination, generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
+Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
 `src/tools.json` contains only the selected public request contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository.
 

@@ -67,7 +67,7 @@ cube('Boombox handle',(2.85,-2.15,.89),(.62,.06,.08),chrome,.025)
 for x in [2.57,3.13]:cube('Handle riser',(x,-2.15,.79),(.06,.06,.22),chrome,.02)
 # Characters: articulated enamel toy robots with lit faces and headphones.
 bots=[]
-for idx,(name,pos,size,color) in enumerate([('PIP',(-1.85,-.35,.13),.86,cyan),('MOMO',(.0,-1.05,.13),1.05,coral),('DOT',(1.9,2.05,.13),.79,yellow)]):
+for idx,(name,pos,size,color) in enumerate([('PIP',(-1.85,-.35,.13),.86,cyan),('MOMO',(.0,-1.05,.13),1.05,coral),('DOT',(1.9,2.05,.103),.79,yellow)]):
  root=empty(name,pos);root.scale=(size,)*3
  body=cube(name+' torso',(0,0,1.29),(.68,.43,.68),color,.15,root)
  torso=empty(name+' chest assembly');torso.parent=root
@@ -120,7 +120,8 @@ for f in range(1,194):
  sc.frame_set(f);t=(f-1)/24;w=2*pi*t
  for root,body,torso,head,eyes,limbs,i in bots:
   phase=w+ i*1.7; bounce=.07*(1-cos(2*phase));sway=.10*sin(phase)
-  root.rotation_euler.z=.07*sin(phase*.5)+( -.1 if i==0 else .08 if i==2 else 0);key(root)
+  root.rotation_euler.z=.08 if i==2 else .07*sin(phase*.5)+(-.1 if i==0 else 0);key(root)
+  if i==2:bounce=.025*(1-cos(2*phase))
   body.location=(sway,0,1.29+bounce);body.rotation_euler=(.04*sin(phase),.1*sin(phase),0);key(body)
   torso.location=(sway,0,1.29+bounce);torso.rotation_euler=body.rotation_euler;key(torso)
   head.location=(sway+.025*sin(phase),0,1.94+bounce);head.rotation_euler=(.04*cos(phase),.11*sin(phase+.4),.13*sin(phase*.5));key(head)
@@ -128,6 +129,8 @@ for f in range(1,194):
   for side,L in limbs.items():
    p=phase+(pi if side<0 else 0);lift=max(0,sin(p))*.16
    hip=(sway+side*.23,0,1.03+bounce);ankle=(side*.28+.06*sin(p),-.05-.09*max(0,sin(p)),.16+lift);knee=((hip[0]+ankle[0])/2,-.11-.10*max(0,sin(p)),.60+lift*.4)
+   if i==2:
+    lift=0;ankle=(side*.28,-.05,.145);knee=((hip[0]+ankle[0])/2,-.18,.58+bounce*.4)
    shoulder=(sway+side*.43,0,1.54+bounce)
    if i==2:
     elbow=(sway+side*.49,-.22,1.32+bounce);wrist=(side*.3,-.58,1.28+.10*sin(p))
@@ -137,7 +140,7 @@ for f in range(1,194):
    points=dict(hip=hip,knee=knee,ankle=ankle,shoulder=shoulder,elbow=elbow,wrist=wrist)
    for n,v in points.items():L[n].location=v;key(L[n])
    for n,a,b in [('thigh',hip,knee),('shin',knee,ankle),('upperarm',shoulder,elbow),('forearm',elbow,wrist)]:place(L[n],a,b);key(L[n])
-   L['hand'].location=wrist;key(L['hand']);L['shoe'].location=(ankle[0],ankle[1]-.095,.12+lift);L['shoe'].rotation_euler.x=-.17*max(0,sin(p));key(L['shoe'])
+   L['hand'].location=wrist;key(L['hand']);L['shoe'].location=(ankle[0],ankle[1]-.095,ankle[2]-.04);L['shoe'].rotation_euler.x=0 if i==2 else -.17*max(0,sin(p));key(L['shoe'])
  for o,loc,i in floaters:o.location=loc+Vector((.06*sin(t+i),.06*cos(t+i),.12*sin(w*.25+i)));key(o)
  disco.rotation_euler.z=t*.32;key(disco)
  for o in records:o.rotation_euler.z=t*3.5;key(o)

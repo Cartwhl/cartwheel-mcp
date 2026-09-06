@@ -103,4 +103,6 @@ test('real stdio process completes MCP initialization and discovery', async t =>
   t.after(() => client.close());
   await client.connect(transport);
   assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), definitions.map(tool => tool.name));
+  assert.equal((await client.listPrompts()).prompts[0].name, 'grounded_blender_scene');
+  assert.match((await client.readResource({ uri: 'cartwheel://workflows/blender' })).contents[0].text, /Gaussian/);
 });

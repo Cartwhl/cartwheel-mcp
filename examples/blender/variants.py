@@ -20,7 +20,7 @@ for o in list(bpy.data.objects):
 root.location=(0,0,.14)
 for o in root.children:
  if o.name.startswith('MOMO'):o.hide_render=False
-animate_bot('MOMO',os.path.join(ROOT,'assets','showcase_0.bvh' if STYLE=='garden' else 'showcase_1.bvh'))
+
 # Materials shared by the artist-made sets.
 cream=mat('Ivory clay',(.86,.79,.64),rough=.6);dark=mat('Soft charcoal',(.035,.045,.06),rough=.55);gold=mat('Satin brass',(.6,.35,.1),metal=.6);mint=mat('Celadon',(.32,.63,.52),rough=.72);peach=mat('Peach paper',(.94,.43,.31),rough=.8);pink=mat('Sakura paper',(.9,.43,.55),rough=.85)
 if STYLE=='garden':
@@ -38,7 +38,7 @@ if STYLE=='garden':
   for j in range(5):
    a=j*2*pi/5;o=uv('Paper lotus petal',(x+.07*cos(a),y+.07*sin(a),.2),(.07,.12,.035),pink);o.rotation_euler.z=a
  for i in range(7):
-  x=-2.8+i*.73;y=-1.25+.12*sin(i)
+  x=-2.8+i*.73;y=-2.0+.12*sin(i)
   o=cyl('Stepping stone',(x,y,.12),.35,.12,cream);o.scale.y=.62
  wood=mat('Warm cedar',(.33,.13,.065),rough=.65)
  for x,y,height in [(-2.7,1.3,2.5),(2.6,2.2,2.25)]:
@@ -60,7 +60,7 @@ if STYLE=='garden':
  for j in range(12):segment('Bamboo backdrop',(-2+j*.35,3.4,.1),(-2+j*.35,3.4,1.5),.025,wood)
  text('Garden title','SLOW MORNING',(0,3.0,3.00),.27,cream)
  text('Garden subtitle','MOTION  /  IN  BALANCE',(0,3.0,2.7),.10,cream)
- root.location=(-.55,-.15,.14);root.rotation_euler.z=-pi/2;root.scale=(1.2,)*3
+ root.location=(-.55,-.15,.08);root.rotation_euler.z=-pi/2;root.scale=(1.2,)*3
  # Clay finish on the hero, with softer face lights.
  for m in [bpy.data.materials.get('Guava lacquer'),bpy.data.materials.get('Warm porcelain')]:
   p=m.node_tree.nodes.get('Principled BSDF');p.inputs['Roughness'].default_value=.72;p.inputs['Metallic'].default_value=0
@@ -74,11 +74,11 @@ else:
  dust=mat('Powdered basalt',(.17,.21,.28),rough=.9);rock=mat('Moon rock',(.25,.3,.39),rough=.92)
  cube('Deep space ground',(0,0,-.6),(200,200,.1),mat('Deep space',(.009,.013,.025),rough=.9),0)
  cyl('Moon fragment',(0,0,-.12),4.7,.40,dust)
- for x,y,r in [(-2.8,1.2,.65),(2.65,1.4,.8),(.3,2.5,.45),(-3,-1.1,.38)]:
+ for x,y,r in [(-3.5,1.5,.35),(3.55,1.5,.4),(.3,.7,.45),(-.8,-.6,.38)]:
   cyl('Crater floor',(x,y,.09),r,.025,dark);torus('Crater rim',(x,y,.12),r,.07,rock)
  for i in range(65):
   x=random.uniform(-4.2,4.2);y=random.uniform(-3.4,3.4)
-  if x*x+y*y>19 or (abs(y)<1.0 and abs(x)<3):continue
+  if x*x+y*y>19 or 1.9 < math.hypot(x,y) < 3.15:continue
   bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1,radius=random.uniform(.06,.25),location=(x,y,.16));o=bpy.context.object;o.name='Basalt shard';o.scale.z=random.uniform(.4,1.2);o.data.materials.append(rock)
  orange=mat('Mission orange',(.95,.31,.065),metal=.3);glow=mat('Landing light',(1,.5,.1),emit=4)
  for x,y in [(-3.5,-.65),(3.5,.2)]:
@@ -96,15 +96,12 @@ else:
   x=random.uniform(-5,5);z=random.uniform(2.3,6)
   uv('Distant star',(x,6,z),(.012,)*3,mat('Starlight '+str(i),(.7,.82,1),emit=2))
  bodymat=bpy.data.materials['Guava lacquer'].node_tree.nodes['Principled BSDF'];bodymat.inputs['Base Color'].default_value=(.72,.8,.84,1);bodymat.inputs['Metallic'].default_value=.28;bodymat.inputs['Roughness'].default_value=.28
- # Curved stage trajectory. This is Blender root placement, not model conditioning.
- for f in range(1,193):
-  u=(f-1)/191;x=-2.0+4*u;y=-.65+.55*sin(pi*u)
-  root.location=(x,y,.14);root.rotation_euler.z=math.atan2(.55*pi*cos(pi*u),4)+pi/2
-  root.keyframe_insert(data_path='location',frame=f);root.keyframe_insert(data_path='rotation_euler',frame=f)
+ root.location=(0,0,.08);root.rotation_euler=(0,0,0);root.scale=(1.05,)*3
  light('Lunar sunlight',(-6,-4,8),1900,(.63,.77,1),3,(0,0,0))
  light('Golden planetary bounce',(3,4,6),2100,(1,.45,.12),4,(0,0,1))
  light('Suit fill',(1,-7,4),400,(.5,.75,1),4,(0,0,1))
  camloc=(8,-15,8);target=(0,.6,1.9);ortho=14.2
+animate_bot('MOMO',os.path.join(ROOT,'assets','showcase_0.bvh' if STYLE=='garden' else 'showcase_1.bvh'),trajectory='arc' if STYLE=='moon' else None)
 bpy.ops.object.camera_add(location=camloc);cam=bpy.context.object;s.camera=cam;cam.data.type='ORTHO';cam.data.ortho_scale=ortho;cam.rotation_euler=(Vector(target)-cam.location).to_track_quat('-Z','Y').to_euler()
 s.view_settings.view_transform='AgX';s.render.engine='CYCLES';s.cycles.samples=48;s.cycles.use_denoising=True
 from scene_utils import configure_device

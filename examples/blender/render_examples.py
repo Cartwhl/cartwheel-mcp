@@ -33,12 +33,17 @@ base=root/'after_hours.blend'
 blender('render_preview.py',base)
 blender('retarget.py',base)
 subprocess.run([sys.executable,str(root/'make_music.py')],check=True)
-if args.example in ['all','after-hours'] and not args.preview_only:
- blender('render_final.py',base)
- encode(root,root/'after-hours.mp4',root/'after_hours_groove.wav')
-for style,title in [('garden','slow-morning'),('moon','moon-mail')]:
- if args.example in ['all',style]:
+for style in ('garden','moon'):
+ if args.example in ('all',style):
   blender('variants.py',base,['--',style])
-  if not args.preview_only:
+
+# Contact and continuity checks are part of the default workflow, before movies.
+blender('verify_motion.py',extra=['--','--example',args.example])
+if not args.preview_only:
+ if args.example in ('all','after-hours'):
+  blender('render_final.py',base)
+  encode(root,root/'after-hours.mp4',root/'after_hours_groove.wav')
+ for style,title in [('garden','slow-morning'),('moon','moon-mail')]:
+  if args.example in ('all',style):
    blender('render_variant.py',root/style/(style+'.blend'))
    encode(root/style,root/(title+'.mp4'))
