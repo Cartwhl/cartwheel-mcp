@@ -444,5 +444,6 @@
     "sourceSha256": "6ea951089fa5087083b5295d01d065847b9d8c953754d537d4bd3627ed3339c6",
     "distanceMeters": 1.3583023495470368,
     "selection": "Explicitly reviewed source interval; constant phase rate and a symmetric seam blend. Not inferred from contact intervals."
-  }
+  },
+  "retargetReference": "swing-mhr-anatomical-shoulders-v1"
 }

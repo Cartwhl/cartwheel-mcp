@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "source": {
-    "sha256": "b1911f34d8540840ecd1be4e2584a60a04634003fc00a31ff053929d7b0868fd",
+    "sha256": "fd241a2a9ca4348bb55dec46c0afc3d8451b8404cb16271b7bf2299f796743e3",
     "frameCount": 120,
     "units": "meters",
     "upAxis": "Y",
     "positionConvention": "absolute_local",
     "provenance": {
-      "motionID": "mogen-job-1788893022-6XGS-01M215AJJPH7BP6DE6JFTPH7BR",
+      "motionID": "mogen-job-1788904127-3X2R-01M21FXFKCJS479J39MQ7P8R46",
       "characterID": "char-upload-MHR",
       "model": "swing",
-      "prompt": "A person standing still raises their right arm and waves hello with their right hand, then lowers their arm back to their side. Their feet stay planted, face forward, relaxed friendly greeting."
+      "prompt": "A person standing comfortably facing forward gives a friendly wave with their right hand and lowers it again. The right elbow stays out to the side and the hand waves near head height. The left elbow is softly bent with the left hand held loosely in front of the left hip, away from the body throughout. Feet stay planted and slightly apart."
     }
   },
   "skeleton": {
@@ -168,18 +168,18 @@
     "rootMotion": "preserve",
     "positionConvention": "offset_relative",
     "droppedAuthoredEvents": 0,
-    "outputSha256": "0113585ab8d23693fac9e1c9c424e391d2834ec69cfc696c71227ea6eac2ac7b"
+    "outputSha256": "9b6ba74b49de30af645b9d1811591e1e41e31ff04ec374412c62163d53c8e768"
   },
   "rootMotion": {
     "rootJoint": "root",
     "measuredBeforeInPlaceRemoval": true,
     "displacementMetersYUp": [
-      -0.005051,
-      -0.004007,
-      0.01995
+      -0.040926,
+      -0.00221,
+      -0.02022
     ],
-    "horizontalPathMeters": 0.10069,
-    "referenceSpeedMetersPerSecond": 0.025384,
+    "horizontalPathMeters": 0.163121,
+    "referenceSpeedMetersPerSecond": 0.041123,
     "measurementSpanSeconds": 3.966627
   },
   "contacts": {
@@ -200,8 +200,8 @@
         "startSeconds": 0,
         "endSeconds": 3.99996,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.023001,
-        "minimumHeightMeters": 0.013589,
+        "meanSpeedMetersPerSecond": 0.03462,
+        "minimumHeightMeters": 0.012312,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -213,8 +213,8 @@
         "startSeconds": 0,
         "endSeconds": 3.99996,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.023909,
-        "minimumHeightMeters": 0.016826,
+        "meanSpeedMetersPerSecond": 0.036471,
+        "minimumHeightMeters": 0.016923,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -238,31 +238,31 @@
   "flightCandidates": [],
   "loopSeam": {
     "source": "measured_sample_endpoints",
-    "maximumJointAngleDegrees": 29.323418,
+    "maximumJointAngleDegrees": 62.564642,
     "worstJoints": [
       {
-        "joint": "r_wrist_twist",
-        "degrees": 29.323418
+        "joint": "r_lowarm",
+        "degrees": 62.564642
       },
       {
         "joint": "r_uparm",
-        "degrees": 25.332947
+        "degrees": 62.18047
       },
       {
-        "joint": "r_lowarm_twist4_proc",
-        "degrees": 23.458748
+        "joint": "r_clavicle",
+        "degrees": 52.692885
       },
       {
-        "joint": "r_lowarm_twist3_proc",
-        "degrees": 15.639164
+        "joint": "r_wrist",
+        "degrees": 42.347112
       },
       {
-        "joint": "r_lowarm_twist2_proc",
-        "degrees": 7.819599
+        "joint": "l_ball",
+        "degrees": 23.728745
       }
     ],
-    "rootVelocityMismatchMetersPerSecond": 0.106338,
-    "rootTranslationWrapMeters": 0.020966,
+    "rootVelocityMismatchMetersPerSecond": 0.178388,
+    "rootTranslationWrapMeters": 0.045702,
     "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
   },
   "events": [
@@ -275,5 +275,6 @@
   ],
   "warnings": [
     "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
-  ]
+  ],
+  "retargetReference": "swing-mhr-anatomical-shoulders-v1"
 }

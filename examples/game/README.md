@@ -1,6 +1,6 @@
 # Motion Playground
 
-A complete Three.js integration with **one MHR character with native knee corrections and four real Swing performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it.
+A complete Three.js integration with **one MHR character with native full-body pose corrections and four real Swing performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it. Use **Close view** to inspect the character, then drag to orbit.
 
 From the repository root:
 
@@ -17,13 +17,13 @@ Use the Idle/Walk/Run buttons for a movement preview, or **WASD/arrows** to cont
 
 | Behavior | Implementation |
 | --- | --- |
-| One character, multiple clips | A single native MHR rig; animation-only BVHs and native knee corrections evaluated after blending. Skeleton IDs, rest offsets and hashes must match. |
+| One character, multiple clips | A single native MHR rig; animation-only BVHs and native full-body pose corrections evaluated after blending. Skeleton IDs, rest offsets and hashes must match. |
 | Idle/walk/run | Smoothed movement, idle blending and one reviewed steady cycle per gait, aligned on a selected left-contact phase. |
 | Movement speed | Cadence follows **actual distance traveled** after boundary clamping, using measured net cycle travel. The cycle duration determines the input speed; noisy contact intervals never warp playback time. |
 | Moving upper-body action | A normalized replacement layer from `c_spine3` upward. Its weight fades the upper-body base out while the locomotion root and legs continue. |
 | Interruption | Immediate cancellation of future gesture events, with a short fade of the current upper-body pose. |
 | Event-driven VFX | Footfall rings follow inferred contact intervals. The hand signal ring uses an explicitly authored event, not an invented model timing guarantee. |
-| Small crowd | `SkeletonUtils.clone` shares assets/materials; each character owns its skeleton, mixer, phase and a small position buffer for knee deformation. Crowd steering follows a continuous orbit. |
+| Small crowd | `SkeletonUtils.clone` shares assets/materials; each character owns its skeleton, mixer, phase and a position buffer for pose deformation. Crowd steering follows a continuous orbit. |
 
 This is an integration reference on a flat surface. It does not implement navigation, terrain IK, collision-aware generation, cloth/hair simulation, or a large-crowd performance target. Device and asset cost matter; the UI reports actual render frame rate and draw calls. Speed matching and phase blending reduce integration errors but do not repair source motion foot sliding or guarantee planted feet during every transition.
 
@@ -73,6 +73,8 @@ For walk/run, add an explicitly reviewed cycle to the options before preparing:
 These numbers describe the bundled walk, **not a rule for other motions**. Select a steady interior stride in the new source. Cycle frame indices refer to the prepared clip after trimming; `endFrame` is the next cycle boundary sample, so duration is `(endFrame - startFrame) / fps`. Keep `blendFrames` of source on each side. `phaseFrame` identifies the same foot phase in both gaits. The helper measures net travel and stores a source-bound `playbackCycle` in the sidecar. Playback uses a short symmetric seam blend with constant phase speed; it does not apply general motion smoothing or IK.
 
 Replace **both** files under `assets/` only after review. The browser checks the prepared BVH hash against its sidecar. A matching skeleton ID identifies names, parent relationships and rest offsets normalized to meters/Y-up; it does not certify skin weights, mesh quality or root coordinate conventions. The reference also checks the loaded character’s rest offsets and converts the BVH root into its GLB parent’s coordinate basis.
+
+The bundled Swing-to-MHR exports additionally need a verified shoulder reference correction; see [AUDIT.md](AUDIT.md#follow-up-shoulder-reference-poses). `swing-mhr-reference.json` stores geometry-derived reference frames and the reviewed clip hashes. Their sidecars identify this calibration with `retargetReference`. `rest-pose.mjs` applies it before blending and preserves world-space arm rotations by compensating the upper-arm children. Review the reference and extend its hash list deliberately when replacing a clip. Do not reuse it for a different source rig or native Comic MHR motion. Test an unanimated bind pose, arms down, arms raised, and front/side deformation; matching BVH offsets is insufficient.
 
 ### Setup frames and trimming
 
@@ -125,19 +127,20 @@ blender --background --factory-startup --disable-autoexec --python-exit-code 1 \
   --out /path/to/prepared-assets
 ```
 
-The helper checks surface and facial-target correspondence, preserves static identity, retains native bones/weights, and compiles the released knee corrections. `mhr-rig.mjs` evaluates them from each character’s final blended pose. The example has fixed appearance and body motion; it does not ship an interactive identity or facial-expression editor.
+The helper checks surface and facial-target correspondence, preserves static identity, retains native bones/weights, and compiles the released full-body pose corrections. `mhr-rig.mjs` evaluates them from each character’s final blended pose. The example has fixed appearance and body motion; it does not ship an interactive identity or facial-expression editor.
 
 ## Files and validation
 
 - `controller.mjs`: movement, steady cycle phase, and interruptible event clocks.
 - `playback.mjs`: hip-preserving travel removal, reviewed cycle seams and body masks.
-- `mhr-rig.mjs` / `prepare-mhr.py`: native MHR knee corrections and reproducible asset preparation.
+- `mhr-rig.mjs` / `prepare-mhr.py`: native MHR full-body pose corrections and reproducible asset preparation.
+- `rest-pose.mjs`: explicit anatomical reference-frame alignment, with child rotation compensation.
 - `app.mjs`: native-rig loading, Three.js animation layers, controls and rendering.
 - `prepare-game.mjs`: bounded BVH preparation and metadata sidecars.
 - `sample-poses.mjs`: source-compatible editor snapshots.
 - `serve.mjs`: loopback-only preview server.
 - [ASSETS.md](ASSETS.md): character and motion provenance.
 
-See [AUDIT.md](AUDIT.md) for the defects found in the first reference and their corrections. `npm test` checks MCP trust boundaries, frame/unit/root handling, steady phase clocks, cycle seams, gesture replacement, crowd steering, MHR deformation against independent reference poses, and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
+See [AUDIT.md](AUDIT.md) for the defects found in the first reference and their corrections. `npm test` checks MCP trust boundaries, frame/unit/root handling, steady phase clocks, cycle seams, gesture replacement, crowd steering, MHR deformation against independent reference poses, shoulder reference geometry, and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
 
 Built on the maintained [Three.js animation system](https://threejs.org/manual/en/animation-system.html), [BVHLoader](https://threejs.org/docs/pages/BVHLoader.html), [AnimationUtils](https://threejs.org/docs/pages/AnimationUtils.html) and [SkeletonUtils](https://threejs.org/docs/pages/module-SkeletonUtils.html).

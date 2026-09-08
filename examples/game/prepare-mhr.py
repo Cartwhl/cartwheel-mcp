@@ -17,7 +17,7 @@ from mathutils import Quaternion
 from mathutils.kdtree import KDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'comic4'))
-from mhr_knees import coordinates, load_model, knee_mask, local_rotation
+from mhr_knees import coordinates, load_model, local_rotation
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--character', type=Path, required=True, help='Native MHR GLB from Cartwheel.')
@@ -74,9 +74,9 @@ morphed=basis.copy()
 for weight,key in zip(weights,keys):
     if weight:morphed+=float(weight)*(coordinates(key.data)-basis)
 body.data.vertices.foreach_set('co',morphed.astype(np.float32).ravel())
-mask=knee_mask(body,rig)
-support=np.flatnonzero(mask>0)
-components=np.flatnonzero(np.any(model['blends'][:,indices[support]]!=0,axis=(1,2)))
+# MHR's native deformation model includes shoulders, elbows and the torso.
+# A knee-only mask leaves its shoulder volume correction missing when posing.
+components=np.flatnonzero(np.any(model['blends'][:,indices]!=0,axis=(1,2)))
 native_positions=(morphed[raw_indices][:,[0,2,1]]*np.array([1,1,-1])).astype('<f4')
 
 parents={child:i for i,node in enumerate(gltf['nodes']) for child in node.get('children',[])}
@@ -90,9 +90,9 @@ for name in model['names'][1:]:
  raw_world=Y_to_Z@world_rotation(i)
  basis_change=raw_world.inverted()@rig.data.bones[name].matrix_local.to_quaternion()
  n=gltf['nodes'][i];bone_data.append({'name':name,'rest':n.get('rotation',[0,0,0,1]),'basis':[basis_change.x,basis_change.y,basis_change.z,basis_change.w]})
-recipe={'source':'MHR v1.0.1 native knee correctives','bones':bone_data,'components':[{'name':f'MHR_Knee_{c:04d}','features':[[int(f),float(model['activation'][c,f])] for f in np.flatnonzero(model['activation'][c])]} for c in components]}
+recipe={'source':'MHR v1.0.1 native full-body pose correctives','bones':bone_data,'components':[{'name':f'MHR_Pose_{c:04d}','features':[[int(f),float(model['activation'][c,f])] for f in np.flatnonzero(model['activation'][c])]} for c in components]}
 recipe['schemaVersion']=1
-z={'deltas':np.stack([(model['blends'][c,indices]*mask[:,None]*scale)[raw_indices] for c in components]),'names':np.array([f'MHR_Knee_{c:04d}' for c in components])}
+z={'deltas':np.stack([(model['blends'][c,indices]*scale)[raw_indices] for c in components])}
 
 raw=(character).read_bytes();jlen=struct.unpack_from('<I',raw,12)[0];j=json.loads(raw[20:20+jlen]);bin_start=20+jlen+8;binary=raw[bin_start:]
 # Retain only buffers/accessors used by mesh geometry and native skinning.
@@ -139,7 +139,7 @@ for index in {p['attributes']['POSITION'] for p in j['meshes'][0]['primitives']}
     accessor['min']=native_positions.min(0).tolist()
     accessor['max']=native_positions.max(0).tolist()
 j['accessors']=accessors;j['bufferViews']=newviews;j['buffers']=[{'byteLength':len(newbin)}]
-j['asset']['extras']={'provenance':'Cartwheel MHR native rig. MHR v1.0.1 knee correctives (Apache-2.0), transferred with verified surface/face-target correspondence. Static identity baked into the surface; unused morph targets removed for this body-motion example.'}
+j['asset']['extras']={'provenance':'Cartwheel MHR native rig. MHR v1.0.1 full-body pose correctives (Apache-2.0), transferred with verified surface/face-target correspondence. Static identity baked into the surface; unused morph targets removed for this body-motion example.'}
 encoded=json.dumps(j,separators=(',',':')).encode();encoded+=b' '*(-len(encoded)%4);newbin+=b'\0'*(-len(newbin)%4)
 out=struct.pack('<III',0x46546C67,2,12+8+len(encoded)+8+len(newbin))+struct.pack('<II',len(encoded),0x4E4F534A)+encoded+struct.pack('<II',len(newbin),0x004E4942)+newbin
 (output/'character.glb').write_bytes(out)

@@ -4,7 +4,7 @@ const decode = (text, Type) => new Type(Uint8Array.from(atob(text), c => c.charC
 
 // Released MHR sparse rotation features → ReLU activations → corrective deltas.
 // Evaluate AFTER animation blending, so transitions and interruptions deform
-// consistently. Sparse CPU updates avoid 600 GPU morph texture layers per mesh.
+// consistently. Sparse CPU updates avoid thousands of GPU morph texture layers.
 export function readMHRCorrectives(data) {
   return { ...data, components: data.components.map(c => ({ ...c, indices: decode(c.indices, Uint16Array), deltas: decode(c.deltas, Float32Array) })) };
 }

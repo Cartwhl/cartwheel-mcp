@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "source": {
-    "sha256": "7edd93c5f401bc3560c90c0473e7fb171b4d05453db538dcd386b3604de3b87a",
+    "sha256": "87fd9b01b3345daeea0d7160ba7a68258587eb97f7cd654f720db081039d5a37",
     "frameCount": 126,
     "units": "meters",
     "upAxis": "Y",
     "positionConvention": "absolute_local",
     "provenance": {
-      "motionID": "mogen-job-1788893016-N634-01M215AFC8JK2GRTEKXHCA4ET3",
+      "motionID": "mogen-job-1788904121-B0M8-01M21FXDFYVTK9VY9WXKB7YSQY",
       "characterID": "char-upload-MHR",
       "model": "swing",
-      "prompt": "A person standing upright calmly at rest, arms relaxed naturally at their sides, subtle breathing. They stay in place, feet planted, facing forward throughout."
+      "prompt": "A person stands comfortably with feet shoulder width apart, elbows slightly bent and held away from their ribs. Both hands hang loosely in front of the hips, clearly away from the body. Subtle relaxed breathing and a tiny natural head movement, remaining in place and facing forward."
     }
   },
   "skeleton": {
@@ -168,18 +168,18 @@
     "rootMotion": "preserve",
     "positionConvention": "offset_relative",
     "droppedAuthoredEvents": 0,
-    "outputSha256": "05c44db00b9e75109a957a724d714ff6b2b3ad9e23dbb06e3e2a951defe71789"
+    "outputSha256": "8e2a73e3027a45f9f41e50101eb0724e8d6eaf58e3ef226de57ab98000e6c80d"
   },
   "rootMotion": {
     "rootJoint": "root",
     "measuredBeforeInPlaceRemoval": true,
     "displacementMetersYUp": [
-      0.008139,
+      -0.001058,
       0,
-      0.010816
+      -0.01916
     ],
-    "horizontalPathMeters": 0.053874,
-    "referenceSpeedMetersPerSecond": 0.01293,
+    "horizontalPathMeters": 0.049784,
+    "referenceSpeedMetersPerSecond": 0.011948,
     "measurementSpanSeconds": 4.166625
   },
   "contacts": {
@@ -200,8 +200,8 @@
         "startSeconds": 0,
         "endSeconds": 4.199958,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.013145,
-        "minimumHeightMeters": 0.014087,
+        "meanSpeedMetersPerSecond": 0.013344,
+        "minimumHeightMeters": 0.015087,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -213,8 +213,8 @@
         "startSeconds": 0,
         "endSeconds": 4.199958,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.013085,
-        "minimumHeightMeters": 0.015529,
+        "meanSpeedMetersPerSecond": 0.014355,
+        "minimumHeightMeters": 0.015434,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -238,35 +238,36 @@
   "flightCandidates": [],
   "loopSeam": {
     "source": "measured_sample_endpoints",
-    "maximumJointAngleDegrees": 0.318613,
+    "maximumJointAngleDegrees": 0.242807,
     "worstJoints": [
       {
+        "joint": "l_middle2",
+        "degrees": 0.242807
+      },
+      {
+        "joint": "l_wrist_twist",
+        "degrees": 0.222882
+      },
+      {
+        "joint": "l_talocrural",
+        "degrees": 0.215605
+      },
+      {
         "joint": "r_uparm",
-        "degrees": 0.318613
+        "degrees": 0.207799
       },
       {
-        "joint": "r_ball",
-        "degrees": 0.254425
-      },
-      {
-        "joint": "l_ball",
-        "degrees": 0.253817
-      },
-      {
-        "joint": "r_thumb1",
-        "degrees": 0.236797
-      },
-      {
-        "joint": "r_middle1",
-        "degrees": 0.227623
+        "joint": "r_ring2",
+        "degrees": 0.195192
       }
     ],
-    "rootVelocityMismatchMetersPerSecond": 0.043377,
-    "rootTranslationWrapMeters": 0.013536,
+    "rootVelocityMismatchMetersPerSecond": 0.033554,
+    "rootTranslationWrapMeters": 0.019189,
     "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
   },
   "events": [],
   "warnings": [
     "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
-  ]
+  ],
+  "retargetReference": "swing-mhr-anatomical-shoulders-v1"
 }

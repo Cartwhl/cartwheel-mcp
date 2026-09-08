@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "swing-mhr-anatomical-shoulders-v1",
+  "sourceCharacterID": "char-upload-Mani",
+  "targetCharacterID": "char-upload-MHR",
+  "upAxis": "Y",
+  "derivation": "Source collar-to-shoulder geometry defines the anatomical X axis; projected world Y defines the twist reference. Native MHR geometry supplies the local target frame. retargetWorld is the stock target configuration reference, not a pose sampled from the animation. C = inverse(retargetWorld) * sourceAnatomicalWorld * inverse(nativeAnatomicalLocal). Apply q_clavicle * C and inverse(C) * q_upperarm.",
+  "sourceShoulderOffsets": {
+    "left": [
+      0.118056,
+      0.055559,
+      -0.005328
+    ],
+    "right": [
+      -0.118056,
+      0.055563,
+      -0.005328
+    ]
+  },
+  "reviewedClips": {
+    "idle": "8e2a73e3027a45f9f41e50101eb0724e8d6eaf58e3ef226de57ab98000e6c80d",
+    "walk": "b262385d4475cecff51e064894e841094bcc747a62b8c5e222cbbe8fb13ea9a9",
+    "run": "15fba56f8c3ec9ab8affc8220d06cdf7c97dd39e0fda036214c9553b9dded3ce",
+    "signal": "9b6ba74b49de30af645b9d1811591e1e41e31ff04ec374412c62163d53c8e768"
+  },
+  "joints": [
+    {
+      "joint": "l_clavicle",
+      "children": [
+        "l_uparm"
+      ],
+      "nativeLocal": [
+        0.22266080975532532,
+        -0.6469087600708008,
+        -0.1771494746208191,
+        0.7074950337409973
+      ],
+      "sourceAnatomicalWorld": [
+        0.004914921106966705,
+        0.02200617171814873,
+        0.21791713014521405,
+        0.975706767602899
+      ],
+      "retargetWorld": [
+        0.6814922073536112,
+        0.22826970086899004,
+        -0.1725592522647396,
+        0.6735611458657151
+      ],
+      "nativeAnatomicalLocal": [
+        -0.7085146114885318,
+        1.8028569678416408e-7,
+        1.1572860312871587e-7,
+        0.7056961423355019
+      ]
+    },
+    {
+      "joint": "r_clavicle",
+      "children": [
+        "r_uparm"
+      ],
+      "nativeLocal": [
+        0.6469087600708008,
+        0.22266080975532532,
+        0.7074950337409973,
+        0.1771494746208191
+      ],
+      "sourceAnatomicalWorld": [
+        0.2179306535839827,
+        0.9757037471411503,
+        0.004915226115731268,
+        0.02200610359440283
+      ],
+      "retargetWorld": [
+        -0.5262539722355384,
+        -0.21356339914807732,
+        -0.18972879600424725,
+        0.800905987827609
+      ],
+      "nativeAnatomicalLocal": [
+        1.2986722708083424e-7,
+        0.7085146209010794,
+        0.7056961328853737,
+        -1.081072923124481e-7
+      ]
+    }
+  ]
+}

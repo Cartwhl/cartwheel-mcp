@@ -6,6 +6,7 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { MovementController, SignalClock, gaitProfile, timeAtPhase, orbitIntent, clamp } from './controller.mjs';
 import { cycleClip, splitBodyClip, centerRootMotion } from './playback.mjs';
 import { readMHRCorrectives, bindMHRCorrectives } from './mhr-rig.mjs';
+import { remapJointFrames } from './rest-pose.mjs';
 
 const $ = id => document.getElementById(id);
 const canvas = $('view');
@@ -23,7 +24,7 @@ camera.position.set(4.5, 3.4, 7.2);
 const orbit = new OrbitControls(camera, canvas);
 orbit.target.set(0, .8, .7);
 orbit.enableDamping = true; orbit.maxPolarAngle = Math.PI * .46;
-orbit.minDistance = 5; orbit.maxDistance = 22; orbit.enablePan = false;
+orbit.minDistance = 2; orbit.maxDistance = 22; orbit.enablePan = false;
 const hemi = new THREE.HemisphereLight('#e2ffe7', '#51615f', 2.3); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff5d3', 3.4);
 sun.position.set(-4, 10, 5); sun.castShadow = true;
@@ -88,9 +89,23 @@ $('details').addEventListener('click', () => $('source-dialog').showModal());
 $('close-details').addEventListener('click', () => $('source-dialog').close());
 $('source-dialog').addEventListener('click', e => { if (e.target === $('source-dialog')) $('source-dialog').close(); });
 
-let player, actors = [], clips, metadata, profiles, model, cycles, bodyClips, kneeData, compactView = false;
+let player, actors = [], clips, metadata, profiles, model, cycles, bodyClips, poseData, retargetReference, compactView = false;
+let closeView = new URLSearchParams(location.search).get('close') === '1';
 const modulo = (n, d) => ((n % d) + d) % d;
 const v = new THREE.Vector3(), q = new THREE.Quaternion();
+
+function framePlayer() {
+  if (!player) return;
+  $('close-view').setAttribute('aria-pressed', String(closeView));
+  if (closeView) {
+    orbit.target.set(player.controller.x, 1, player.controller.z);
+    camera.position.copy(orbit.target).add(new THREE.Vector3(.5, .25, 3.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw));
+  } else {
+    orbit.target.set(0, .8, .7); camera.position.set(4.5, 3.4, 7.2);
+  }
+  orbit.update();
+}
+$('close-view').addEventListener('click', () => { closeView = !closeView; framePlayer(); });
 
 async function loadClip(name) {
   const [text, m] = await Promise.all([fetch(`assets/${name}.bvh`).then(r => r.text()), fetch(`assets/${name}.motion.json`).then(r => r.json())]);
@@ -105,6 +120,8 @@ async function loadClip(name) {
     if (!target?.isBone) throw Error(`Character is missing joint ${bone.name}.`);
     if (bone !== bvh.skeleton.bones[0] && target.position.distanceTo(bone.position) > .0001) throw Error(`Rest offset mismatch at ${bone.name}; retarget to this character before playback.`);
   }
+  if (m.retargetReference !== retargetReference.id || retargetReference.reviewedClips[name] !== sha) throw Error(`Review the retarget reference for ${name} before playback; this calibration is specific to these Swing exports.`);
+  remapJointFrames(bvh.clip, model, retargetReference.joints);
   model.updateMatrixWorld(true);
   const parentInverse = root.parent.matrixWorld.clone().invert();
   const parentRotationInverse = root.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
@@ -138,7 +155,7 @@ function makeActor(index) {
   } else { controller.x = 2; controller.z = 1.1; }
   const signal = new SignalClock(clips.signal.duration, metadata.signal.events);
   const bones = { left_ankle: avatar.getObjectByName('l_talocrural'), right_ankle: avatar.getObjectByName('r_talocrural'), right_wrist: avatar.getObjectByName('r_wrist') };
-  const actor = { group, avatar, mixer, actions, controller, signal, bones, updateKnees: bindMHRCorrectives(avatar, kneeData), contact: { left: false, right: false }, index, idleClock: index * .7, yaw: Math.PI * .1, phaseTimes: {}, contacts: {} };
+  const actor = { group, avatar, mixer, actions, controller, signal, bones, updatePoseCorrectives: bindMHRCorrectives(avatar, poseData), contact: { left: false, right: false }, index, idleClock: index * .7, yaw: Math.PI * .1, phaseTimes: {}, contacts: {} };
   return actor;
 }
 
@@ -169,7 +186,7 @@ function actorStep(actor, dt, intent) {
   actor.actions.signal.time = Math.min(actor.signal.time, clips.signal.duration - 1e-5);
   actor.actions.signal.setEffectiveWeight(actor.signal.weight);
   actor.mixer.update(dt);
-  actor.updateKnees();
+  actor.updatePoseCorrectives();
   actor.group.updateMatrixWorld(true);
   const dominant = c.movingWeight < .5 ? 'idle' : c.runBlend > .5 ? 'run' : 'walk';
   const time = dominant === 'idle' ? idleTime : actor.phaseTimes[dominant] + cycles[dominant].startFrame / metadata[dominant].timing.fps;
@@ -195,7 +212,7 @@ function actorStep(actor, dt, intent) {
 }
 
 async function initialize() {
-  const [gltf, correctives] = await Promise.all([new GLTFLoader().loadAsync('assets/character.glb'), fetch('assets/mhr-correctives.json').then(r => r.json())]); model = gltf.scene; kneeData = readMHRCorrectives(correctives);
+  const [gltf, correctives, reference] = await Promise.all([new GLTFLoader().loadAsync('assets/character.glb'), fetch('assets/mhr-correctives.json').then(r => r.json()), fetch('assets/swing-mhr-reference.json').then(r => r.json())]); model = gltf.scene; poseData = readMHRCorrectives(correctives); retargetReference = reference;
   model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
   const loaded = Object.fromEntries(await Promise.all(['idle', 'walk', 'run', 'signal'].map(async name => [name, await loadClip(name)])));
   metadata = Object.fromEntries(Object.entries(loaded).map(([name, value]) => [name, value.metadata]));
@@ -204,11 +221,13 @@ async function initialize() {
   clips = Object.fromEntries(Object.entries(loaded).map(([name, value]) => [name, value.clip]));
   profiles = { walk: gaitProfile(metadata.walk), run: gaitProfile(metadata.run) };
   for (const name of ['walk', 'run']) clips[name] = cycleClip(clips[name], cycles[name], metadata[name].timing.fps);
-  const upperNames = new Set(); model.getObjectByName('c_spine3').traverse(o => { if (o.isBone) upperNames.add(o.name); });
+  // A right-hand greeting should not replace the other arm's idle/walk pose.
+  const upperNames = new Set(); model.getObjectByName('r_clavicle').traverse(o => { if (o.isBone) upperNames.add(o.name); });
   bodyClips = {};
   for (const name of ['idle', 'walk', 'run']) for (const [part, clip] of Object.entries(splitBodyClip(clips[name], upperNames))) bodyClips[`${name}-${part}`] = clip;
   bodyClips.signal = splitBodyClip(clips.signal, upperNames).upper;
   actors = Array.from({ length: 9 }, (_, i) => makeActor(i)); player = actors[0];
+  framePlayer();
   $('signal').addEventListener('click', () => player.signal.start());
   $('interrupt').addEventListener('click', () => { player.signal.interrupt(); $('event').textContent = 'interrupted'; });
   for (const [name, m] of Object.entries(metadata)) {
@@ -227,7 +246,7 @@ async function initialize() {
 const resize = new ResizeObserver(() => {
   const { width, height } = canvas.getBoundingClientRect(); renderer.setSize(width, height, false); camera.aspect = width / height;
   const compact = width < 640;
-  if (compact !== compactView) camera.position.sub(orbit.target).setLength(compact ? 5.8 : 9).add(orbit.target);
+  if (compact !== compactView && !closeView) camera.position.sub(orbit.target).setLength(compact ? 5.8 : 9).add(orbit.target);
   compactView = compact;
   camera.fov = compact ? 42 : 35;
   camera.updateProjectionMatrix();
@@ -264,7 +283,7 @@ function frame(now) {
     if (t >= 1) { scene.remove(e.mesh); e.mesh.material.dispose(); effects.splice(i, 1); }
     else { e.mesh.scale.setScalar(1 + t * (e.signal ? 8 : 3)); e.mesh.material.opacity = (1 - t) * .8; if (e.signal) e.mesh.quaternion.copy(camera.quaternion); }
   }
-  const focus = compactView || mode === 'manual' ? new THREE.Vector3(player.controller.x, .9, player.controller.z) : new THREE.Vector3(0, .8, .7);
+  const focus = closeView || compactView || mode === 'manual' ? new THREE.Vector3(player.controller.x, closeView ? 1 : .9, player.controller.z) : new THREE.Vector3(0, .8, .7);
   const shift = focus.sub(orbit.target).multiplyScalar(1 - Math.exp(-8 * dt));
   orbit.target.add(shift); camera.position.add(shift);
   orbit.update(); renderer.render(scene, camera);
