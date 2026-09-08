@@ -51,3 +51,12 @@ test('real bundled Cartwheel animation produces finite diagnostics without chang
   assert.ok(Number.isFinite(m.loopSeam.maximumJointAngleDegrees));
   assert.ok(m.skeleton.jointCount > 20);
 });
+
+test('split contacts remain visible but cannot silently bias alternating stride averages', () => {
+  const text = readFileSync(new URL('../examples/game/assets/run.bvh', import.meta.url), 'utf8');
+  const m = prepareMotion(text, { ...assumptions, positionConvention: 'offset_relative', rootJoint: 'root', leftFootJoint: 'l_talocrural', rightFootJoint: 'r_talocrural', contactSpeed: .7 }).metadata;
+  const split = m.strides.left.cycles.find(c => c.startFrame === 118 && c.endFrame === 125);
+  assert.equal(split.alternating, false); assert.match(split.warning, /split/);
+  assert.ok(m.strides.left.meanSeconds > .73 && m.strides.left.meanSeconds < .81);
+  assert.ok(m.warnings.some(w => w.includes('Do not drive playback timing')));
+});

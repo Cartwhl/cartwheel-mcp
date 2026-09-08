@@ -4,8 +4,8 @@ export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const approach = (a, b, rate, dt) => a + (b - a) * (1 - Math.exp(-rate * dt));
 export const smooth = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 
-export function orbitIntent(x, z, centerZ = 1.1, radius = 2) {
-  const dx = x, dz = z - centerZ, distance = Math.hypot(dx, dz);
+export function orbitIntent(x, z, centerZ = 1.1, radius = 2, centerX = 0) {
+  const dx = x - centerX, dz = z - centerZ, distance = Math.hypot(dx, dz);
   const nx = distance > .05 ? dx / distance : 1, nz = distance > .05 ? dz / distance : 0;
   const correction = (radius - distance) * 1.3;
   return { x: -nz + nx * correction, z: nx + nz * correction };
@@ -22,21 +22,21 @@ export function eventsBetween(events, previous, current, period, loop = false) {
   return out;
 }
 
+// One explicitly reviewed cycle per gait. Contact estimates are diagnostics,
+// never a variable-rate playback clock: split contacts can create false strides.
 export function gaitProfile(metadata) {
-  const starts = metadata.contacts.left.filter(c => !c.beginsBeforeClip).map(c => c.startSeconds);
-  const distance = metadata.strides.left.meanDistanceMeters;
-  if (starts.length < 2 || !(distance > 0)) throw Error('Locomotion requires reviewed left-contact cycles and measured stride distance.');
-  return { starts, distance, period: metadata.timing.playbackPeriodSeconds };
+  const { startFrame, endFrame, phaseFrame, distanceMeters, sourceSha256 } = metadata.playbackCycle ?? {};
+  if (sourceSha256 !== metadata.source.sha256 || ![startFrame, endFrame, phaseFrame].every(Number.isInteger)
+    || startFrame < 0 || endFrame >= metadata.timing.frameCount || endFrame <= startFrame
+    || phaseFrame < startFrame || phaseFrame >= endFrame || !(distanceMeters > 0)) {
+    throw Error('Locomotion requires a reviewed cycle tied to this source, a phase marker, and measured cycle travel.');
+  }
+  return { distance: distanceMeters, period: (endFrame - startFrame) / metadata.timing.fps, offset: (phaseFrame - startFrame) / metadata.timing.fps };
 }
 
-// Integer phase = left contact. Both locomotion clips sample the same foot phase
-// while retaining their original within-stride timing and multi-stride variation.
+// Constant source-time rate within a cycle; integer phase is its reviewed marker.
 export function timeAtPhase(profile, phase) {
-  const count = profile.starts.length;
-  const whole = Math.floor(phase), part = phase - whole;
-  const cycle = Math.floor(whole / count), index = ((whole % count) + count) % count;
-  const a = profile.starts[index], b = index + 1 < count ? profile.starts[index + 1] : profile.starts[0] + profile.period;
-  return cycle * profile.period + a + (b - a) * part;
+  return phase * profile.period + profile.offset;
 }
 
 export class SignalClock {

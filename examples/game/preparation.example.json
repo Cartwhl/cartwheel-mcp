@@ -2,13 +2,13 @@
   "units": "meters",
   "upAxis": "Y",
   "positionConvention": "absolute_local",
-  "rootJoint": "pelvis",
-  "leftFootJoint": "left_ankle",
-  "rightFootJoint": "right_ankle",
+  "rootJoint": "root",
+  "leftFootJoint": "l_talocrural",
+  "rightFootJoint": "r_talocrural",
   "groundHeight": 0,
   "contactHeight": 0.1,
   "contactSpeed": 0.25,
   "setupFrame": "keep",
-  "rootMotion": "in_place",
+  "rootMotion": "preserve",
   "authoredEvents": []
 }

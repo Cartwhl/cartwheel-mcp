@@ -14,7 +14,7 @@ export function createExampleServer() {
       if (!/^(127\.0\.0\.1|localhost):\d+$/.test(req.headers.host ?? '') || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(403).end(); return; }
       const pathname = new URL(req.url, 'http://localhost').pathname;
       let root, path;
-      if (['/', '/index.html', '/app.mjs', '/controller.mjs', '/style.css'].includes(pathname)) { root = example; path = resolve(example, pathname === '/' ? 'index.html' : pathname.slice(1)); }
+      if (['/', '/index.html', '/app.mjs', '/controller.mjs', '/playback.mjs', '/mhr-rig.mjs', '/style.css'].includes(pathname)) { root = example; path = resolve(example, pathname === '/' ? 'index.html' : pathname.slice(1)); }
       else if (/^\/assets\/[a-z0-9.-]+\.(glb|bvh|json)$/.test(pathname)) { root = resolve(example, 'assets'); path = resolve(example, pathname.slice(1)); }
       else if (/^\/vendor\/three\/[a-zA-Z0-9_./-]+\.js$/.test(pathname)) { root = three; path = resolve(three, pathname.replace('/vendor/three/', '')); }
       else { res.writeHead(404).end(); return; }

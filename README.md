@@ -133,13 +133,13 @@ List pagination uses `nextToken`. Search requires `pageSize` and uses the respon
 
 ## Game animation and motion editing
 
-Version **0.4.0** includes a complete [Three.js Motion Playground](examples/game/README.md): one character, four generated animation-only clips, idle/walk/run transitions, an interruptible upper-body signal, contact-driven effects and a small crowd. It runs locally without an API key:
+Version **0.4.0** includes a complete [Three.js Motion Playground](examples/game/README.md): one MHR character with native knee corrections, four generated animation-only clips, idle/walk/run transitions, an interruptible upper-body signal, contact-driven effects and a small crowd. It runs locally without an API key:
 
 ```sh
 npm run example:game
 ```
 
-Open the printed localhost URL. Walk/run cadence follows actual movement distance and a shared contact phase. Every clip includes its prompt, skeleton identity, source/prepared hashes, timing, contact assumptions and measured motion metadata. The [preparation helper](examples/game/README.md#prepare-a-replacement-clip) handles verified setup-frame removal, trimming, authored-event remapping and in-place conversion after measuring original travel.
+Open the printed localhost URL. Walk/run cadence follows actual movement distance through reviewed steady cycles. Hip sway is retained, and the upper-body gesture replaces the corresponding locomotion tracks. Every clip includes its prompt, skeleton identity, source/prepared hashes, timing, contact assumptions and measured motion metadata. The [preparation helper](examples/game/README.md#prepare-a-replacement-clip) handles verified setup-frame removal, trimming, authored-event remapping and in-place conversion after measuring original travel.
 
 Ask your assistant:
 

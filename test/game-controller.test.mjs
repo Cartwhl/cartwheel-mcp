@@ -5,8 +5,15 @@ import { MovementController, SignalClock, eventsBetween, gaitProfile, timeAtPhas
 import { samplePoses } from '../examples/game/sample-poses.mjs';
 import { prepareMotion, inspectBVH } from '../src/motion-analysis.mjs';
 import { assumptions, fixture } from './fixtures/bvh.mjs';
+import { AnimationClip, VectorKeyframeTrack, QuaternionKeyframeTrack, Quaternion, Vector3, Bone, AnimationMixer } from 'three';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+import { cycleClip, centerRootMotion, splitBodyClip } from '../examples/game/playback.mjs';
+import { prepareFile } from '../examples/game/prepare-game.mjs';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-const profile = { distance: 1, starts: [0, 1], period: 2 };
+const profile = { distance: 1, offset: 0, period: 1 };
 const intent = { x: 1, z: 0, speed: 2, walkSpeed: 1, runSpeed: 2 };
 test('blocked motion stops the locomotion clock; diagonal input has no speed boost', () => {
   const c = new MovementController(profile, profile);
@@ -40,19 +47,71 @@ test('interruption prevents future authored events, fades the held pose, and sup
   assert.deepEqual(eventsBetween([event], 1.9, 3.1, 2, true), [event]);
 });
 
-test('bundled gait metadata aligns both clips on left contact and hashes their prepared BVHs', () => {
+test('reviewed gait clocks stay constant across every contact and cycle wrap', () => {
   for (const name of ['walk', 'run']) {
     const m = JSON.parse(readFileSync(new URL(`../examples/game/assets/${name}.motion.json`, import.meta.url), 'utf8'));
     const p = gaitProfile(m);
-    assert.equal(timeAtPhase(p, 0), m.contacts.left.find(c => !c.beginsBeforeClip).startSeconds);
-    assert.ok(timeAtPhase(p, p.starts.length) > p.period);
+    for (let i = 0; i < 2400; i++) assert.ok(Math.abs(timeAtPhase(p, (i + 1) / 120) - timeAtPhase(p, i / 120) - p.period / 120) < 1e-12);
+    assert.throws(() => gaitProfile({ ...m, playbackCycle: { ...m.playbackCycle, sourceSha256: 'changed' } }), /reviewed cycle/);
     const text = readFileSync(new URL(`../examples/game/assets/${name}.bvh`, import.meta.url), 'utf8');
-    const parsed = prepareMotion(text, { units: m.source.units, upAxis: m.source.upAxis, positionConvention: 'offset_relative', leftFootJoint: 'left_ankle', rightFootJoint: 'right_ankle', groundHeight: 0 }).metadata;
+    const parsed = prepareMotion(text, { units: m.source.units, upAxis: m.source.upAxis, positionConvention: 'offset_relative', rootJoint: 'root', leftFootJoint: 'l_talocrural', rightFootJoint: 'r_talocrural', groundHeight: 0 }).metadata;
     assert.equal(parsed.source.sha256, m.preparation.outputSha256);
     assert.equal(parsed.skeleton.id, m.skeleton.id);
-    assert.equal(parsed.rootMotion.referenceSpeedMetersPerSecond, null);
+    assert.ok(parsed.rootMotion.referenceSpeedMetersPerSecond > 1);
     assert.ok(m.rootMotion.referenceSpeedMetersPerSecond > 1);
+    const source = new BVHLoader().parse(text).clip, c = m.playbackCycle;
+    const distance = centerRootMotion(source, 'root', c.startFrame / m.timing.fps, c.endFrame / m.timing.fps);
+    assert.ok(Math.abs(distance - p.distance) < .0001);
+    const clip = cycleClip(source, c, m.timing.fps);
+    assert.equal(clip.duration, p.period);
+    for (const t of clip.tracks) {
+      const size = t.getValueSize(); assert.deepEqual(t.values.slice(0, size), t.values.slice(-size));
+      assert.ok(Math.abs(t.times.at(-1) - clip.duration) < 1e-6);
+      assert.ok(t.values.every(Number.isFinite));
+    }
   }
+});
+
+test('cycle preparation measures the reviewed interval after trimming and rejects missing seam context', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'cartwheel-cycle-')); t.after(() => rm(dir, { recursive: true, force: true }));
+  const source = join(dir, 'source.bvh'); await writeFile(source, fixture({ setup: true }));
+  const options = { ...assumptions, setupFrame: 'remove_verified_rest', startFrame: 5, endFrame: 90, rootMotion: 'preserve', reviewedCycle: { startFrame: 4, endFrame: 28, phaseFrame: 16, blendFrames: 3 } };
+  const m = await prepareFile(source, options, join(dir, 'prepared'));
+  assert.equal(m.timing.sourceFrameOffset, 6); assert.equal(m.timing.frameCount, 85);
+  assert.ok(Math.abs(m.playbackCycle.distanceMeters - .8) < 1e-6);
+  assert.equal(m.playbackCycle.sourceSha256, m.source.sha256);
+  assert.ok(gaitProfile(m).distance > 0);
+  await assert.rejects(() => prepareFile(source, { ...options, reviewedCycle: { ...options.reviewedCycle, startFrame: 1 } }, join(dir, 'bad')), /both sides/);
+});
+
+test('crowd steering does not chase targets or reverse heading while orbiting', () => {
+  const c = new MovementController(profile, profile); c.x = 4.3; c.z = -.8;
+  let previous;
+  for (let i = 0; i < 3600; i++) {
+    const d = c.step(1 / 60, { ...intent, speed: 1.1, ...orbitIntent(c.x, c.z, -.8, 4.3) });
+    const yaw = Math.atan2(d.dx, d.dz);
+    if (i > 120) { assert.ok(c.speed > 1.09); assert.ok(Math.abs(Math.atan2(Math.sin(yaw - previous), Math.cos(yaw - previous))) * 60 < .3); }
+    previous = yaw;
+  }
+});
+
+test('removing cycle travel preserves hip sway and aligns facing with movement', () => {
+  const rotations = Array.from({ length: 5 }, () => new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2).toArray()).flat();
+  const clip = new AnimationClip('walk', 4, [new VectorKeyframeTrack('root.position', [0, 1, 2, 3, 4], [0, 1, 0, 1, 1.1, .1, 2, 1, 0, 3, .9, -.1, 4, 1, 0]), new QuaternionKeyframeTrack('root.quaternion', [0, 1, 2, 3, 4], rotations)]);
+  assert.equal(centerRootMotion(clip, 'root', 0, 4), 4);
+  const positions = clip.tracks[0].values;
+  assert.ok(Math.abs(positions[3] + .1) < 1e-6); assert.ok(Math.abs(positions[4] - 1.1) < 1e-6);
+  assert.ok(new Quaternion().fromArray(clip.tracks[1].values).angleTo(new Quaternion()) < 1e-6);
+});
+
+test('the full-weight gesture replaces upper-body motion while legs keep locomotion', () => {
+  const root = new Bone(); root.name = 'root'; const arm = new Bone(); arm.name = 'arm'; const leg = new Bone(); leg.name = 'leg'; root.add(arm, leg);
+  const track = (name, angle) => { const q = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), angle).toArray(); return new QuaternionKeyframeTrack(`${name}.quaternion`, [0, 1], [...q, ...q]); };
+  const base = splitBodyClip(new AnimationClip('base', 1, [track('arm', .6), track('leg', .4)]), new Set(['arm']));
+  const gesture = new AnimationClip('signal', 1, [track('arm', 1.2)]), mixer = new AnimationMixer(root);
+  mixer.clipAction(base.lower).play(); mixer.clipAction(base.upper).play().setEffectiveWeight(0); mixer.clipAction(gesture).play(); mixer.update(.1);
+  assert.ok(Math.abs(arm.quaternion.angleTo(new Quaternion()) - 1.2) < 1e-6);
+  assert.ok(Math.abs(leg.quaternion.angleTo(new Quaternion()) - .4) < 1e-6);
 });
 
 test('pose snapshots preserve frame cadence and include End Sites in the native bone order', () => {

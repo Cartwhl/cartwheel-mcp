@@ -190,8 +190,17 @@ export function prepareMotion(text, options) {
   const strides = {};
   for (const side of ['left', 'right']) {
     const starts = contacts[side].filter(c => !c.beginsBeforeClip).map(c => c.startFrame);
-    const cycles = starts.slice(1).map((b, i) => ({ startFrame: starts[i], endFrame: b, seconds: round((b - starts[i]) * dt), distanceMeters: round(path[b] - path[starts[i]]) }));
-    strides[side] = { cycles, meanSeconds: average(cycles.map(c => c.seconds)), meanDistanceMeters: travelSpeed > .01 ? average(cycles.map(c => c.distanceMeters)) : null };
+    const opposite = contacts[side === 'left' ? 'right' : 'left'];
+    const cycles = starts.slice(1).map((b, i) => {
+      const a = starts[i], oppositeStarts = opposite.filter(c => c.startFrame > a && c.startFrame < b).length;
+      return { startFrame: a, endFrame: b, seconds: round((b - a) * dt), distanceMeters: round(path[b] - path[a]),
+        alternating: oppositeStarts === 1,
+        ...((oppositeStarts !== 1) ? { warning: 'Expected one opposite-foot contact start; this may be a split/missed contact or non-alternating motion.' } : {}),
+      };
+    });
+    const alternating = cycles.filter(c => c.alternating);
+    strides[side] = { cycles, meanSeconds: average(alternating.map(c => c.seconds)), meanDistanceMeters: travelSpeed > .01 ? average(alternating.map(c => c.distanceMeters)) : null,
+      summaryUses: 'Only candidate cycles containing exactly one opposite-foot contact start; still requires visual review.' };
   }
   if (rootMotion === 'in_place') for (let i = 0; i < n; i++) {
     for (const [axis, value] of ['X', 'Y', 'Z'].map((axis, component) => [axis, corrections[i].getComponent(component)])) {
@@ -205,7 +214,7 @@ export function prepareMotion(text, options) {
     schemaVersion: 1,
     source: { sha256: hash(text), frameCount: source.frameCount, units, upAxis, positionConvention },
     skeleton: { id: `sha256:${hash(JSON.stringify(identity))}`, rootJoint: joints[0].name, jointCount: joints.length, joints: joints.map(j => j.name), identityIncludes: 'joint names, parents, rest offsets normalized to meters/Y-up' },
-    timing: { fps: round(1 / dt), frameCount: n, sampleSpanSeconds: round(sampleSpan), playbackPeriodSeconds: round(n * dt), frameIndexing: 'zero-based; endFrame exclusive', sourceFrameOffset: sourceOffset },
+    timing: { fps: round(1 / dt), frameCount: n, sampleSpanSeconds: round(sampleSpan), frameSequenceDurationSeconds: round(n * dt), frameIndexing: 'zero-based; endFrame exclusive', sourceFrameOffset: sourceOffset },
     setupFrame: { policy: setupFrame, firstFrameNonRootRotationsAtRest: firstFrameAtRest, removedFrames: setupOffset, verification: 'Non-root rotation channels within 0.001 degrees of rest. Removal requires explicit caller identification of an extra setup frame.' },
     preparation: { startFrame, endFrame, rootMotion, positionConvention: 'offset_relative', droppedAuthoredEvents },
     rootMotion: { rootJoint: motionRoot.name, measuredBeforeInPlaceRemoval: true, displacementMetersYUp: delta.toArray().map(round), horizontalPathMeters: round(path.at(-1)), referenceSpeedMetersPerSecond: travelSpeed > .01 ? round(travelSpeed) : null, measurementSpanSeconds: round(sampleSpan) },
@@ -217,6 +226,7 @@ export function prepareMotion(text, options) {
       ...(travelSpeed <= .01 ? ['No measurable horizontal travel: reference speed and stride distance are unavailable. In-place clips cannot recover original travel or world-contact speed.'] : []),
       ...(setupFrame === 'keep' && firstFrameAtRest ? ['Frame 0 has rest rotations. It was preserved; explicitly identify an extra setup frame before removing it.'] : []),
       ...(Math.min(...left.map(p => p.y), ...right.map(p => p.y)) < groundHeight - .05 ? ['Foot joint passes more than 5cm below the declared ground; review units, joint choice, floor height and motion.'] : []),
+      ...(['left', 'right'].some(side => strides[side].cycles.some(c => !c.alternating)) ? ['Some contact intervals do not form alternating strides. They are excluded from stride averages. Do not drive playback timing directly from inferred contact starts.'] : []),
       'Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events.',
     ],
   };

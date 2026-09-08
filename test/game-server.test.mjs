@@ -10,7 +10,7 @@ function request(server, url, { host = '127.0.0.1:4173', method = 'GET' } = {}) 
 }
 test('the local preview serves required modules and assets but rejects other hosts, writes and filesystem escape', async () => {
   const server = createExampleServer();
-  for (const path of ['/', '/app.mjs', '/vendor/three/build/three.core.js', '/assets/walk.motion.json', '/assets/character.glb']) {
+  for (const path of ['/', '/app.mjs', '/playback.mjs', '/mhr-rig.mjs', '/vendor/three/build/three.core.js', '/assets/walk.motion.json', '/assets/character.glb', '/assets/mhr-correctives.json']) {
     const r = await request(server, path); assert.equal(r.status, 200, path); assert.ok(r.body.length > 20);
   }
   for (const path of ['/.env', '/../../src/index.mjs', '/vendor/three/../../package.json', '/assets/%2e%2e/secret.glb', '/serve.mjs']) assert.notEqual((await request(server, path)).status, 200, path);

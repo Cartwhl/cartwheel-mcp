@@ -1,11 +1,13 @@
 # Asset provenance
 
-The example’s single character is **Cartwheel Mani** (`char-upload-Mani`). The standalone GLB was exported without animation after removing the hidden skeleton-display meshes. Its skin, materials, native bone hierarchy and bind transforms are retained. The playable example shares this one character’s geometry and materials across clones.
+The character is **Cartwheel MHR** (`char-upload-MHR`). The native GLB’s bone hierarchy, bind transforms, skin weights and vertex ordering are retained. Its default static body/head shape settings are baked into the surface before unused identity/facial targets are removed. Materials are recolored for this example.
 
-All four performances were generated specifically for this MCP game reference using **Cartwheel Swing**, with 4-second requests, native Mani BVH retargets at 30 fps, Y up, and original root travel. Loop processing can change the returned duration; the metadata records the actual exported sample counts. Idle/walk/run were requested with looping; signal was not.
+Knee deformation uses the released [MHR v1.0.1](https://github.com/facebookresearch/MHR/releases/tag/v1.0.1) corrective model from Meta, distributed under [Apache-2.0](assets/MHR-LICENSE.txt). `prepare-mhr.py` verifies the reference surface and facial-target correspondence, transfers an anatomical knee region, and compiles the sparse model. The browser evaluates corrections after animation blending. Each clone shares the source data but owns its deformation buffer. The example does not animate facial expressions.
 
-Each `assets/*.motion.json` records the exact prompt, source motion ID, character ID, source and prepared hashes, skeleton identity, contact assumptions, trim policy and source-derived measurements. No raw API responses, account identity, API keys or signed URLs are included.
+All four performances were generated for this MCP reference using **Cartwheel Swing**, with four-second requests. They were subsequently retargeted to native MHR BVH at 30 fps, Y up, preserving root travel. Idle/walk/run were requested with looping; signal was not. Loop processing can change the returned sample count.
 
-The signal event at source frame 35 is **authored for the example**, not a frame-accurate timing promise from the model. Footfall events are explicitly labeled kinematic estimates. The character, scene renderer, controller and visual effects are not generated motion data.
+Each `assets/*.motion.json` records the exact prompt, source motion ID, character ID, source/prepared hashes, skeleton identity, contact assumptions and source-derived measurements. Walk/run also record a reviewed interior cycle. Playback removes net travel while preserving hip motion and uses a short boundary blend. The full retargeted source performance remains available in the BVH for inspection. See [AUDIT.md](AUDIT.md) for the curation rationale.
 
-Code is covered by the repository’s MIT license. Cartwheel character assets and generated outputs remain subject to the applicable Cartwheel account terms, as described in the repository README.
+The signal event at source frame 35 is **authored for the example**, not a frame-accurate timing promise from the model. Footfall events are kinematic estimates. The controller, scene and effects are not generated motion data. No raw API records, account identifiers, credentials, or signed URLs are included.
+
+Code is covered by the repository’s MIT license. MHR material derived from the released model retains its Apache-2.0 license; Cartwheel-provided character assets and generated outputs remain subject to the applicable Cartwheel account terms described in the repository README.

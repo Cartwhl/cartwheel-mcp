@@ -15,6 +15,10 @@ export const preparationSchema = {
   properties: { ...properties,
     rootMotion: { enum: ['preserve', 'in_place'] },
     authoredEvents: { type: 'array', maxItems: 1000, items: { type: 'object', additionalProperties: false, required: ['name', 'frame'], properties: { name: { type: 'string', pattern: '^[A-Za-z0-9_.:-]{1,80}$' }, frame: { type: 'integer', minimum: 0 } } } },
+    reviewedCycle: { type: 'object', additionalProperties: false, required: ['startFrame', 'endFrame', 'phaseFrame', 'blendFrames'], properties: {
+      startFrame: { type: 'integer', minimum: 0 }, endFrame: { type: 'integer', minimum: 1 },
+      phaseFrame: { type: 'integer', minimum: 0 }, blendFrames: { type: 'integer', minimum: 1 },
+    } },
     provenance: { type: 'object', additionalProperties: false, properties: { motionID, characterID, bodyIndex, prompt: { type: 'string', maxLength: 4000 }, model: { type: 'string', enum: ['swing', 'scoot', 'comic4'] } } },
   },
 };
@@ -22,7 +26,22 @@ const validate = new Ajv({ strict: false }).compile(preparationSchema);
 
 export async function prepareFile(input, options, output) {
   if (!validate(options)) throw Error(`Invalid preparation options: ${JSON.stringify(validate.errors)}`);
-  const { metadata, bvh } = prepareMotion(await readFile(input, 'utf8'), options);
+  const text = await readFile(input, 'utf8');
+  const { metadata, bvh } = prepareMotion(text, options);
+  if (options.reviewedCycle) {
+    const c = options.reviewedCycle;
+    if (options.rootMotion !== 'preserve' || c.startFrame < c.blendFrames || c.endFrame + c.blendFrames >= metadata.timing.frameCount
+      || c.endFrame - c.startFrame <= c.blendFrames * 2 || c.phaseFrame < c.startFrame || c.phaseFrame >= c.endFrame) {
+      throw Error('A reviewed cycle requires preserved travel, a phase marker inside the cycle, and source samples on both sides of its blend window.');
+    }
+    const offset = options.startFrame ?? 0;
+    const measured = prepareMotion(text, { ...options, startFrame: offset + c.startFrame, endFrame: offset + c.endFrame + 1 }).metadata;
+    const [x, , z] = measured.rootMotion.displacementMetersYUp;
+    const distanceMeters = Math.hypot(x, z);
+    if (distanceMeters < .01) throw Error('A locomotion cycle needs measurable net horizontal travel.');
+    metadata.playbackCycle = { ...c, sourceSha256: metadata.source.sha256, distanceMeters,
+      selection: 'Explicitly reviewed source interval; constant phase rate and a symmetric seam blend. Not inferred from contact intervals.' };
+  }
   if (options.provenance) metadata.source.provenance = options.provenance;
   await mkdir(dirname(resolve(output)), { recursive: true });
   await writeFile(`${output}.bvh`, bvh);

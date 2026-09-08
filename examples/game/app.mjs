@@ -4,6 +4,8 @@ import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { MovementController, SignalClock, gaitProfile, timeAtPhase, orbitIntent, clamp } from './controller.mjs';
+import { cycleClip, splitBodyClip, centerRootMotion } from './playback.mjs';
+import { readMHRCorrectives, bindMHRCorrectives } from './mhr-rig.mjs';
 
 const $ = id => document.getElementById(id);
 const canvas = $('view');
@@ -17,9 +19,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#142d28');
 scene.fog = new THREE.Fog('#142d28', 14, 30);
 const camera = new THREE.PerspectiveCamera(35, 1, .05, 100);
-camera.position.set(5.8, 4.8, 8.4);
+camera.position.set(4.5, 3.4, 7.2);
 const orbit = new OrbitControls(camera, canvas);
-orbit.target.set(0, .65, .1);
+orbit.target.set(0, .8, .7);
 orbit.enableDamping = true; orbit.maxPolarAngle = Math.PI * .46;
 orbit.minDistance = 5; orbit.maxDistance = 22; orbit.enablePan = false;
 const hemi = new THREE.HemisphereLight('#e2ffe7', '#51615f', 2.3); scene.add(hemi);
@@ -67,7 +69,10 @@ function setMode(value) {
 }
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
 window.addEventListener('keydown', e => {
-  if ($('source-dialog').open || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  const focused = document.activeElement;
+  const editingText = /TEXTAREA|SELECT/.test(focused.tagName) || focused.isContentEditable
+    || (focused.tagName === 'INPUT' && !['range', 'checkbox', 'button', 'submit', 'reset'].includes(focused.type));
+  if ($('source-dialog').open || editingText || (focused.type === 'range' && e.code.startsWith('Arrow'))) return;
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) { e.preventDefault(); keys.add(e.code); setMode('manual'); }
   if (e.code === 'KeyE' && !e.repeat) player?.signal.start();
   if (e.code === 'Escape') player?.signal.interrupt();
@@ -83,7 +88,7 @@ $('details').addEventListener('click', () => $('source-dialog').showModal());
 $('close-details').addEventListener('click', () => $('source-dialog').close());
 $('source-dialog').addEventListener('click', e => { if (e.target === $('source-dialog')) $('source-dialog').close(); });
 
-let player, actors = [], clips, metadata, profiles, model;
+let player, actors = [], clips, metadata, profiles, model, cycles, bodyClips, kneeData, compactView = false;
 const modulo = (n, d) => ((n % d) + d) % d;
 const v = new THREE.Vector3(), q = new THREE.Quaternion();
 
@@ -92,7 +97,7 @@ async function loadClip(name) {
   const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(b => b.toString(16).padStart(2, '0')).join('');
   if (sha !== m.preparation.outputSha256 || m.preparation.positionConvention !== 'offset_relative' || m.source.units !== 'meters' || m.source.upAxis !== 'Y') throw Error(`Clip ${name} does not match its prepared metadata or this reference’s coordinate contract.`);
   const bvh = new BVHLoader().parse(text);
-  const rootName = m.skeleton.rootJoint, root = model.getObjectByName(rootName);
+  const rootName = m.rootMotion.rootJoint, root = model.getObjectByName(rootName);
   if (!root?.isBone) throw Error(`Character has no ${rootName} bone.`);
   // Same names alone are insufficient: validate the native rest offsets too.
   for (const bone of bvh.skeleton.bones.filter(b => b.name !== 'ENDSITE')) {
@@ -103,9 +108,12 @@ async function loadClip(name) {
   model.updateMatrixWorld(true);
   const parentInverse = root.parent.matrixWorld.clone().invert();
   const parentRotationInverse = root.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const cycle = m.playbackCycle, fps = m.timing.fps;
+  const distance = centerRootMotion(bvh.clip, rootName, cycle ? cycle.startFrame / fps : 0, cycle ? cycle.endFrame / fps : name === 'idle' ? bvh.clip.duration : null, Boolean(cycle));
+  if (cycle && Math.abs(distance - cycle.distanceMeters) > .0001) throw Error('Reviewed cycle travel no longer matches the source.');
   for (const track of bvh.clip.tracks) {
     if (track.name === `${rootName}.position`) for (let i = 0; i < track.values.length; i += 3) {
-      v.fromArray(track.values, i); v.x = 0; v.z = 0; // origin for this in-place controller
+      v.fromArray(track.values, i);
       v.applyMatrix4(parentInverse).toArray(track.values, i);
     }
     if (track.name === `${rootName}.quaternion`) for (let i = 0; i < track.values.length; i += 4) {
@@ -113,22 +121,24 @@ async function loadClip(name) {
     }
   }
   bvh.clip.name = name;
-  bvh.clip.duration = m.timing.playbackPeriodSeconds;
+  // Use the last sample time. Extending duration by a frame held the final pose.
   return { clip: bvh.clip, metadata: m };
 }
 
 function makeActor(index) {
   const avatar = clone(model), group = new THREE.Group(); group.add(avatar); scene.add(group);
   const mixer = new THREE.AnimationMixer(avatar);
-  const actions = Object.fromEntries(Object.entries(clips).map(([name, clip]) => {
+  const actions = Object.fromEntries(Object.entries(bodyClips).map(([name, clip]) => {
     const action = mixer.clipAction(clip); action.play(); action.paused = true; action.setEffectiveWeight(0); return [name, action];
   }));
   const controller = new MovementController(profiles.walk, profiles.run, index * .57);
-  if (index) { controller.x = -4.5 + ((index - 1) % 4) * 3; controller.z = -2.6 - Math.floor((index - 1) / 4) * 2.7; }
-  else controller.z = 1.1;
+  if (index) {
+    const angle = (index - 1) * Math.PI / 4;
+    controller.x = Math.cos(angle) * 4.3; controller.z = -.8 + Math.sin(angle) * 4.3;
+  } else { controller.x = 2; controller.z = 1.1; }
   const signal = new SignalClock(clips.signal.duration, metadata.signal.events);
-  const bones = Object.fromEntries(['left_ankle', 'right_ankle', 'right_wrist'].map(n => [n, avatar.getObjectByName(n)]));
-  const actor = { group, avatar, mixer, actions, controller, signal, bones, contact: { left: false, right: false }, index, idleClock: index * .7, yaw: Math.PI * .1, phaseTimes: {}, contacts: {} };
+  const bones = { left_ankle: avatar.getObjectByName('l_talocrural'), right_ankle: avatar.getObjectByName('r_talocrural'), right_wrist: avatar.getObjectByName('r_wrist') };
+  const actor = { group, avatar, mixer, actions, controller, signal, bones, updateKnees: bindMHRCorrectives(avatar, kneeData), contact: { left: false, right: false }, index, idleClock: index * .7, yaw: Math.PI * .1, phaseTimes: {}, contacts: {} };
   return actor;
 }
 
@@ -142,21 +152,27 @@ function actorStep(actor, dt, intent) {
   }
   actor.group.rotation.y = actor.yaw;
   actor.idleClock += dt;
-  actor.actions.idle.time = modulo(actor.idleClock, clips.idle.duration);
-  actor.actions.idle.setEffectiveWeight(1 - c.movingWeight);
+  const emitted = actor.signal.step(dt);
+  const setBase = (name, time, weight) => {
+    for (const part of ['lower', 'upper']) {
+      const action = actor.actions[`${name}-${part}`]; action.time = time;
+      action.setEffectiveWeight(weight * (part === 'upper' ? 1 - actor.signal.weight : 1));
+    }
+  };
+  const idleTime = modulo(actor.idleClock, clips.idle.duration);
+  setBase('idle', idleTime, 1 - c.movingWeight);
   for (const name of ['walk', 'run']) {
     const time = timeAtPhase(profiles[name], c.phase);
     actor.phaseTimes[name] = modulo(time, clips[name].duration);
-    actor.actions[name].time = actor.phaseTimes[name];
-    actor.actions[name].setEffectiveWeight(c.movingWeight * (name === 'run' ? c.runBlend : 1 - c.runBlend));
+    setBase(name, actor.phaseTimes[name], c.movingWeight * (name === 'run' ? c.runBlend : 1 - c.runBlend));
   }
-  const emitted = actor.signal.step(dt);
   actor.actions.signal.time = Math.min(actor.signal.time, clips.signal.duration - 1e-5);
   actor.actions.signal.setEffectiveWeight(actor.signal.weight);
   actor.mixer.update(dt);
+  actor.updateKnees();
   actor.group.updateMatrixWorld(true);
   const dominant = c.movingWeight < .5 ? 'idle' : c.runBlend > .5 ? 'run' : 'walk';
-  const time = dominant === 'idle' ? actor.actions.idle.time : actor.phaseTimes[dominant];
+  const time = dominant === 'idle' ? idleTime : actor.phaseTimes[dominant] + cycles[dominant].startFrame / metadata[dominant].timing.fps;
   for (const side of ['left', 'right']) {
     const contact = metadata[dominant].contacts[side].some(interval => time >= interval.startSeconds && time < interval.endSeconds);
     if (!actor.index && c.speed > .1 && contact && !actor.contact[side] && $('contacts').checked) {
@@ -179,19 +195,19 @@ function actorStep(actor, dt, intent) {
 }
 
 async function initialize() {
-  const gltf = await new GLTFLoader().loadAsync('assets/character.glb'); model = gltf.scene;
+  const [gltf, correctives] = await Promise.all([new GLTFLoader().loadAsync('assets/character.glb'), fetch('assets/mhr-correctives.json').then(r => r.json())]); model = gltf.scene; kneeData = readMHRCorrectives(correctives);
   model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
   const loaded = Object.fromEntries(await Promise.all(['idle', 'walk', 'run', 'signal'].map(async name => [name, await loadClip(name)])));
   metadata = Object.fromEntries(Object.entries(loaded).map(([name, value]) => [name, value.metadata]));
+  cycles = Object.fromEntries(Object.entries(metadata).filter(([, m]) => m.playbackCycle).map(([name, m]) => [name, m.playbackCycle]));
   if (new Set(Object.values(metadata).map(m => m.skeleton.id)).size !== 1) throw Error('The clips do not share a skeleton identity.');
   clips = Object.fromEntries(Object.entries(loaded).map(([name, value]) => [name, value.clip]));
   profiles = { walk: gaitProfile(metadata.walk), run: gaitProfile(metadata.run) };
-  const upperNames = new Set(); model.getObjectByName('spine3').traverse(o => { if (o.isBone) upperNames.add(o.name); });
-  const additive = clips.signal.clone();
-  THREE.AnimationUtils.makeClipAdditive(additive, 0, clips.signal, metadata.signal.timing.fps);
-  additive.tracks = additive.tracks.filter(t => t.name.endsWith('.quaternion') && upperNames.has(t.name.slice(0, -11)));
-  if (!additive.tracks.length) throw Error('The upper-body mask contains no rotation tracks.');
-  clips.signal = additive;
+  for (const name of ['walk', 'run']) clips[name] = cycleClip(clips[name], cycles[name], metadata[name].timing.fps);
+  const upperNames = new Set(); model.getObjectByName('c_spine3').traverse(o => { if (o.isBone) upperNames.add(o.name); });
+  bodyClips = {};
+  for (const name of ['idle', 'walk', 'run']) for (const [part, clip] of Object.entries(splitBodyClip(clips[name], upperNames))) bodyClips[`${name}-${part}`] = clip;
+  bodyClips.signal = splitBodyClip(clips.signal, upperNames).upper;
   actors = Array.from({ length: 9 }, (_, i) => makeActor(i)); player = actors[0];
   $('signal').addEventListener('click', () => player.signal.start());
   $('interrupt').addEventListener('click', () => { player.signal.interrupt(); $('event').textContent = 'interrupted'; });
@@ -200,7 +216,7 @@ async function initialize() {
     const title = document.createElement('h3'); title.textContent = name;
     const prompt = document.createElement('p'); prompt.textContent = m.source.provenance.prompt;
     const metrics = document.createElement('div'); metrics.className = 'source-metrics';
-    for (const value of [`${m.timing.frameCount} frames · ${m.timing.fps.toFixed(0)} fps`, `${m.setupFrame.removedFrames} setup frames removed`, `${m.loopSeam.maximumJointAngleDegrees.toFixed(1)}° endpoint seam`, ...(name === 'walk' || name === 'run' ? [`${m.rootMotion.referenceSpeedMetersPerSecond.toFixed(2)} m/s reference`] : [])]) {
+    for (const value of [`MHR · ${m.timing.frameCount} source frames · ${m.timing.fps.toFixed(0)} fps`, `${m.setupFrame.removedFrames} setup frames removed`, ...(cycles[name] ? [`Reviewed frames ${cycles[name].startFrame}–${cycles[name].endFrame}`, 'Short seam blend · steady playback', `${(profiles[name].distance / profiles[name].period).toFixed(2)} m/s cycle speed`] : [`${m.loopSeam.maximumJointAngleDegrees.toFixed(1)}° source endpoint seam`])]) {
       const span = document.createElement('span'); span.textContent = value; metrics.append(span);
     }
     row.append(title, prompt, metrics); $('source-content').append(row);
@@ -210,16 +226,18 @@ async function initialize() {
 
 const resize = new ResizeObserver(() => {
   const { width, height } = canvas.getBoundingClientRect(); renderer.setSize(width, height, false); camera.aspect = width / height;
-  camera.fov = 35 + Math.max(0, 1.45 - camera.aspect) * 35;
+  const compact = width < 640;
+  if (compact !== compactView) camera.position.sub(orbit.target).setLength(compact ? 5.8 : 9).add(orbit.target);
+  compactView = compact;
+  camera.fov = compact ? 42 : 35;
   camera.updateProjectionMatrix();
 }); resize.observe(canvas);
-let previous = performance.now(), elapsed = 0, statsTime = 0, frames = 0;
+let previous = performance.now(), statsTime = 0, frames = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const wallDt = (now - previous) / 1000, dt = Math.min(wallDt, .05); previous = now;
   if (!enabled || document.hidden) return;
-  elapsed += dt;
-  const walkSpeed = metadata.walk.rootMotion.referenceSpeedMetersPerSecond, runSpeed = metadata.run.rootMotion.referenceSpeedMetersPerSecond;
+  const walkSpeed = profiles.walk.distance / profiles.walk.period, runSpeed = profiles.run.distance / profiles.run.period;
   let x = 0, z = 0, speed = 0;
   if (mode === 'manual') {
     let side = Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'));
@@ -238,10 +256,7 @@ function frame(now) {
   for (const actor of actors.slice(1)) {
     actor.group.visible = actor.index <= crowd;
     if (!actor.group.visible) continue;
-    const i = actor.index - 1, laneX = -4.2 + i % 4 * 2.8, laneZ = -2.2 - Math.floor(i / 4) * 2.7;
-    const angle = elapsed * .75 + i * 1.3;
-    const targetX = laneX + Math.cos(angle) * 1.1, targetZ = laneZ + Math.sin(angle) * .75;
-    actorStep(actor, dt, { x: targetX - actor.controller.x, z: targetZ - actor.controller.z, speed: walkSpeed * (.68 + i % 3 * .1), walkSpeed, runSpeed });
+    actorStep(actor, dt, { ...orbitIntent(actor.controller.x, actor.controller.z, -.8, 4.3), speed: walkSpeed, walkSpeed, runSpeed });
   }
   for (let i = effects.length - 1; i >= 0; i--) {
     const e = effects[i]; e.age += dt;
@@ -249,6 +264,9 @@ function frame(now) {
     if (t >= 1) { scene.remove(e.mesh); e.mesh.material.dispose(); effects.splice(i, 1); }
     else { e.mesh.scale.setScalar(1 + t * (e.signal ? 8 : 3)); e.mesh.material.opacity = (1 - t) * .8; if (e.signal) e.mesh.quaternion.copy(camera.quaternion); }
   }
+  const focus = compactView || mode === 'manual' ? new THREE.Vector3(player.controller.x, .9, player.controller.z) : new THREE.Vector3(0, .8, .7);
+  const shift = focus.sub(orbit.target).multiplyScalar(1 - Math.exp(-8 * dt));
+  orbit.target.add(shift); camera.position.add(shift);
   orbit.update(); renderer.render(scene, camera);
   frames++; statsTime += wallDt;
   if (statsTime > .8) { $('render-stats').textContent = `${crowd + 1} characters · ${Math.round(frames / statsTime)} fps · ${renderer.info.render.calls} draw calls`; statsTime = 0; frames = 0; }

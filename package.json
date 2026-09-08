@@ -28,7 +28,10 @@
     "examples/game/ASSETS.md",
     "examples/game/assets/*.glb",
     "examples/game/assets/*.bvh",
-    "examples/game/assets/*.json"
+    "examples/game/assets/*.json",
+    "examples/game/*.py",
+    "examples/game/AUDIT.md",
+    "examples/game/assets/MHR-LICENSE.txt"
   ],
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.mjs",

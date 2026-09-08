@@ -1,6 +1,6 @@
 # Motion Playground
 
-A complete Three.js integration with **one reusable Cartwheel character and four real Swing performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it.
+A complete Three.js integration with **one MHR character with native knee corrections and four real Swing performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it.
 
 From the repository root:
 
@@ -17,13 +17,13 @@ Use the Idle/Walk/Run buttons for a movement preview, or **WASD/arrows** to cont
 
 | Behavior | Implementation |
 | --- | --- |
-| One character, multiple clips | A single native Mani GLB; animation-only BVHs. Skeleton IDs, rest offsets and hashes must match. |
-| Idle/walk/run | Smoothed movement, idle blending and a shared left-contact phase between walk/run. |
-| Movement speed | Cadence follows **actual distance traveled** after boundary clamping, using measured stride distance. Source reference speeds determine walk/run input targets. |
-| Moving upper-body action | Three.js additive quaternion tracks above `spine3`, relative to the gesture’s first pose. The locomotion root and legs remain independent. |
+| One character, multiple clips | A single native MHR rig; animation-only BVHs and native knee corrections evaluated after blending. Skeleton IDs, rest offsets and hashes must match. |
+| Idle/walk/run | Smoothed movement, idle blending and one reviewed steady cycle per gait, aligned on a selected left-contact phase. |
+| Movement speed | Cadence follows **actual distance traveled** after boundary clamping, using measured net cycle travel. The cycle duration determines the input speed; noisy contact intervals never warp playback time. |
+| Moving upper-body action | A normalized replacement layer from `c_spine3` upward. Its weight fades the upper-body base out while the locomotion root and legs continue. |
 | Interruption | Immediate cancellation of future gesture events, with a short fade of the current upper-body pose. |
 | Event-driven VFX | Footfall rings follow inferred contact intervals. The hand signal ring uses an explicitly authored event, not an invented model timing guarantee. |
-| Small crowd | `SkeletonUtils.clone` shares geometry/materials; each character owns its skeleton, mixer, movement state and phase. |
+| Small crowd | `SkeletonUtils.clone` shares assets/materials; each character owns its skeleton, mixer, phase and a small position buffer for knee deformation. Crowd steering follows a continuous orbit. |
 
 This is an integration reference on a flat surface. It does not implement navigation, terrain IK, collision-aware generation, cloth/hair simulation, or a large-crowd performance target. Device and asset cost matter; the UI reports actual render frame rate and draw calls. Speed matching and phase blending reduce integration errors but do not repair source motion foot sliding or guarantee planted feet during every transition.
 
@@ -49,7 +49,7 @@ Inspect the file first:
 node examples/game/prepare-game.mjs --input /path/to/walk-source.bvh --inspect
 ```
 
-Copy `preparation.example.json` to your own options file. Confirm units, axes, root and foot joints, and whether position channels **replace** offsets (`absolute_local`) or **add** to them (`offset_relative`). The supplied options match the native Mani retargets used here. A batch BVH export may use different names, units and wrappers.
+Copy `preparation.example.json` to your own options file. Confirm units, axes, root and foot joints, and whether position channels **replace** offsets (`absolute_local`) or **add** to them (`offset_relative`). The supplied options match the native MHR retargets used here. A batch BVH export may use different names, units and wrappers.
 
 ```sh
 node examples/game/prepare-game.mjs \
@@ -58,7 +58,19 @@ node examples/game/prepare-game.mjs \
   --out /path/to/prepared/walk
 ```
 
-This writes `walk.bvh` and `walk.motion.json`. It measures source travel, normalizes position channels to standard offset-relative BVH, optionally trims/removes an identified setup frame, and makes the motion in-place while retaining vertical movement. The example uses meters/Y-up prepared BVH, so choose a compatible export; the general analyzer also supports centimeters and Z-up and reports metric metadata without silently changing source axes or units.
+This writes `walk.bvh` and `walk.motion.json`. It measures source travel, normalizes position channels to standard offset-relative BVH, optionally trims/removes an identified setup frame, and preserves travel with the supplied settings. The browser removes the reviewed cycle’s net travel and heading while retaining hip sway and vertical movement. The helper’s separate `rootMotion: "in_place"` option removes all horizontal root motion when that is explicitly wanted. The example uses meters/Y-up prepared BVH, so choose a compatible export; the general analyzer also supports centimeters and Z-up and reports metric metadata without silently changing source axes or units.
+
+For walk/run, add an explicitly reviewed cycle to the options before preparing:
+
+```json
+{
+  "reviewedCycle": {
+    "startFrame": 57, "endFrame": 93, "phaseFrame": 85, "blendFrames": 3
+  }
+}
+```
+
+These numbers describe the bundled walk, **not a rule for other motions**. Select a steady interior stride in the new source. Cycle frame indices refer to the prepared clip after trimming; `endFrame` is the next cycle boundary sample, so duration is `(endFrame - startFrame) / fps`. Keep `blendFrames` of source on each side. `phaseFrame` identifies the same foot phase in both gaits. The helper measures net travel and stores a source-bound `playbackCycle` in the sidecar. Playback uses a short symmetric seam blend with constant phase speed; it does not apply general motion smoothing or IK.
 
 Replace **both** files under `assets/` only after review. The browser checks the prepared BVH hash against its sidecar. A matching skeleton ID identifies names, parent relationships and rest offsets normalized to meters/Y-up; it does not certify skin weights, mesh quality or root coordinate conventions. The reference also checks the loaded character’s rest offsets and converts the BVH root into its GLB parent’s coordinate basis.
 
@@ -71,9 +83,9 @@ Replace **both** files under `assets/` only after review. The browser checks the
 ```json
 {
   "units": "meters", "upAxis": "Y", "positionConvention": "absolute_local",
-  "rootJoint": "pelvis", "leftFootJoint": "left_ankle", "rightFootJoint": "right_ankle",
-  "groundHeight": 0, "setupFrame": "remove_verified_rest",
-  "startFrame": 3, "endFrame": 90, "rootMotion": "in_place",
+  "rootJoint": "root", "leftFootJoint": "l_talocrural", "rightFootJoint": "r_talocrural",
+  "groundHeight": 0, "setupFrame": "keep",
+  "startFrame": 4, "endFrame": 91, "rootMotion": "preserve",
   "authoredEvents": [{"name": "impact", "frame": 18}]
 }
 ```
@@ -82,11 +94,11 @@ In that example, source frame 18 becomes output frame 14. The impact is an autho
 
 ### Metadata interpretation
 
-- Root displacement, horizontal path length and reference speed are measured **before** in-place removal. Already-in-place clips cannot recover original travel speed. Strides use complete same-foot contact cycles when available; missing measurements are `null`.
+- Root displacement, horizontal path length and reference speed are measured **before** in-place removal. Already-in-place clips cannot recover original travel speed. Stride candidates remain visible, but averages exclude intervals without exactly one opposite-foot contact start. Missing measurements are `null`. These heuristics are not a playback clock.
 - Contacts use joint height and 3D velocity, 1.35× release hysteresis, and a 60 ms minimum interval. Confidence is explicitly **uncalibrated**. Inspect against the feet. This example uses 0.10 m height, 0.25 m/s speed for idle/walk/signal, and 0.70 m/s for running ankle motion.
 - Flight intervals are candidates where both selected joints are above the height threshold. These are not authored takeoff, landing, damage or recovery events.
 - Loop metrics report sample endpoint joint angles, root wrap and velocity mismatch. A moving root can intentionally have large displacement; a small endpoint angle does not prove the whole loop is smooth.
-- `frameCount / fps` is the playback period; `(frameCount - 1) / fps` is the measured sample span. Use the supplied fields rather than silently treating them as equal.
+- `frameSequenceDurationSeconds` is `frameCount / fps`, useful for frame-sequence exports. `sampleSpanSeconds` is `(frameCount - 1) / fps`, the span of the actual animation keys. Neither certifies a loop period. The game uses its reviewed cycle duration and does not hold an extra frame at the wrap.
 
 ## Edit compatible key poses
 
@@ -102,15 +114,30 @@ The output records the source hash, cadence, and Three BVHLoader bone order, inc
 
 Use `edit_motion.constraints` for timed root waypoints or inline full-body constraints. Inline positions are meters. Do not combine `keyPoses` and `constraints` in one request: the upstream worker gives key poses precedence, so the MCP rejects that ambiguous combination. Combine `root2d` and `fullbody` entries inside `constraints` when both are needed. Poll the job, inspect its output, then apply it explicitly.
 
+## Rebuild the MHR character
+
+Use the native `char-upload-MHR` GLB and the [official MHR v1.0.1 assets](https://github.com/facebookresearch/MHR/releases/tag/v1.0.1), including `LICENSE.txt`:
+
+```sh
+blender --background --factory-startup --disable-autoexec --python-exit-code 1 \
+  --python examples/game/prepare-mhr.py -- \
+  --character /path/to/MHR.glb --model-dir /path/to/MHR/assets \
+  --out /path/to/prepared-assets
+```
+
+The helper checks surface and facial-target correspondence, preserves static identity, retains native bones/weights, and compiles the released knee corrections. `mhr-rig.mjs` evaluates them from each character’s final blended pose. The example has fixed appearance and body motion; it does not ship an interactive identity or facial-expression editor.
+
 ## Files and validation
 
-- `controller.mjs`: movement, contact phase, and interruptible event clocks.
+- `controller.mjs`: movement, steady cycle phase, and interruptible event clocks.
+- `playback.mjs`: hip-preserving travel removal, reviewed cycle seams and body masks.
+- `mhr-rig.mjs` / `prepare-mhr.py`: native MHR knee corrections and reproducible asset preparation.
 - `app.mjs`: native-rig loading, Three.js animation layers, controls and rendering.
 - `prepare-game.mjs`: bounded BVH preparation and metadata sidecars.
 - `sample-poses.mjs`: source-compatible editor snapshots.
 - `serve.mjs`: loopback-only preview server.
 - [ASSETS.md](ASSETS.md): character and motion provenance.
 
-`npm test` checks MCP requests and trust boundaries, frame/unit/root handling, event remapping, pose sampling, blocked movement and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
+See [AUDIT.md](AUDIT.md) for the defects found in the first reference and their corrections. `npm test` checks MCP trust boundaries, frame/unit/root handling, steady phase clocks, cycle seams, gesture replacement, crowd steering, MHR deformation against independent reference poses, and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
 
 Built on the maintained [Three.js animation system](https://threejs.org/manual/en/animation-system.html), [BVHLoader](https://threejs.org/docs/pages/BVHLoader.html), [AnimationUtils](https://threejs.org/docs/pages/AnimationUtils.html) and [SkeletonUtils](https://threejs.org/docs/pages/module-SkeletonUtils.html).
