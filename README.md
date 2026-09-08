@@ -1,8 +1,8 @@
 # Cartwheel MCP
 
-**Describe a motion or capture a video. Bring the animation into Blender.**
+**Generate, capture and edit motion. Bring it into Blender or a playable game.**
 
-Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Generate 3D motion from text or capture up to four performers from a video with Comic 4, including facial animation. Retrieve editable animation files, search the motion library, and inspect your characters and scenes.
+Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Generate 3D motion from text or capture up to four performers from a video with Comic 4, including facial animation. Edit performances with paths and poses, loop or stitch clips, measure motion metadata, and run the bundled Three.js game reference.
 
 [![After Hours — generated motion rendered in Blender](docs/media/after-hours.gif)](docs/media/after-hours.mp4)
 
@@ -119,8 +119,47 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 | `get_character` | Inspect one character. |
 | `list_scenes` | Browse scenes. |
 | `get_scene` | Inspect one scene. |
+| `create_scene` | Create an editable scene from accessible motion IDs. |
+| `loop_motion` | Trim and loop an existing motion; creates a new motion. |
+| `stitch_motions` | Trim/blend two motions in order; creates a new motion. |
+| `edit_motion` | Submit a prompt, timed root path and/or compatible full-body constraints. **Consumes credits.** |
+| `edit_key_poses` | Regenerate around compatible native pose snapshots. **Consumes credits.** |
+| `list_motion_edits` | Inspect edit history for a scene timeline slot. |
+| `get_motion_edit` | Check a submitted edit and retrieve its completed output. |
+| `apply_motion_edit` | Apply a reviewed, completed edit to its verified scene slot. |
+| `analyze_motion` | Measure contacts, root travel, strides, flight candidates and loop endpoints; inspect setup-frame handling. |
 
 List pagination uses `nextToken`. Search requires `pageSize` and uses the response's `lastSort` array as `searchAfter`.
+
+## Game animation and motion editing
+
+Version **0.4.0** includes a complete [Three.js Motion Playground](examples/game/README.md): one character, four generated animation-only clips, idle/walk/run transitions, an interruptible upper-body signal, contact-driven effects and a small crowd. It runs locally without an API key:
+
+```sh
+npm run example:game
+```
+
+Open the printed localhost URL. Walk/run cadence follows actual movement distance and a shared contact phase. Every clip includes its prompt, skeleton identity, source/prepared hashes, timing, contact assumptions and measured motion metadata. The [preparation helper](examples/game/README.md#prepare-a-replacement-clip) handles verified setup-frame removal, trimming, authored-event remapping and in-place conversion after measuring original travel.
+
+Ask your assistant:
+
+> Use Cartwheel's game-ready animation workflow. Create a scene with my walking motion, edit it along a timed path, inspect the result, and prepare a matching clip for the Three.js reference.
+
+The **`game_ready_animation`** prompt and **`cartwheel://workflows/game`** resource provide the full process:
+
+```text
+create_scene → get_scene → edit_motion / edit_key_poses
+  → get_motion_edit → review output → apply_motion_edit
+
+loop_motion / stitch_motions → new motionID → analyze_motion
+  → client prepares BVH + metadata → Three.js reference
+```
+
+Edits are asynchronous. Loop/stitch operations are synchronous and can take several minutes; allow four minutes in your MCP client. Submit each mutation once and inspect existing jobs/results after an uncertain response. Applying an edit replaces that slot's performance and requires a completed job belonging to it.
+
+Contacts and flight events are explicitly labeled **kinematic estimates**, separate from authored gameplay events. Setup frames are preserved unless the caller explicitly identifies one and removal passes verification. Declare source units, axes, position-channel convention, root/foot joints and ground height; the workflow explains how these differ across exports. A clip already made in-place cannot recover its original travel speed. Loop endpoint metrics require visual review and do not certify contact quality or a seamless loop.
+
+See the [full MCP game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the server after updating to discover all 22 tools and three workflows.
 
 ## Comic 4: video to editable 3D
 
@@ -179,12 +218,13 @@ The examples use Cartwheel-generated BVH motion, procedural characters and sets,
 
 See [the Blender guide](examples/blender/README.md) for source files, rendering instructions, and motion provenance.
 
-**Paths and poses:** `generate_motion` exposes the documented text-generation API. It does not promise path or pose conditioning. In Moon Mail, Blender advances the generated walking performance along a curve at the source stride speed, turns the character along its tangent, and solves planted-foot contact on the flat floor. That changes scene placement; it is not a constraint sent to the motion model.
+**Paths and poses:** `generate_motion` is text generation. Use the new `edit_motion` and `edit_key_poses` tools for Motion Editor conditioning. The older Moon Mail demo uses a Blender trajectory and contact solve; it was not generated with these editor tools.
 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes thirteen explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes 22 explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- `analyze_motion` reads bounded BVH assets only from approved Cartwheel production storage. API keys are never sent to asset storage. The optional game server is a separate loopback-only process without an API proxy.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.
 - Keys stay in the local environment. They are not bundled in the package or examples.
@@ -215,7 +255,7 @@ npm pack --dry-run
 
 Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
-`src/tools.json` contains only the selected public request contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository.
+`src/tools.json` and `src/game-tools.mjs` contain the selected public request contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
 
 ## Distribution
 

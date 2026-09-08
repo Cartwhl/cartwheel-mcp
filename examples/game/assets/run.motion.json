@@ -1,0 +1,705 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha256": "3de6a292ec014b7dcdde7fd637be65f47d5c320b325c3c759540c78f4e70fbf1",
+    "frameCount": 150,
+    "units": "meters",
+    "upAxis": "Y",
+    "positionConvention": "absolute_local",
+    "provenance": {
+      "motionID": "mogen-job-1788893016-N634-01M215AFSGGQCD6ZER824K1A1T",
+      "characterID": "char-upload-Mani",
+      "model": "swing",
+      "prompt": "A person jogging straight forward at a steady athletic pace, relaxed arms pumping naturally, continuous even strides, no turns, no pauses."
+    }
+  },
+  "skeleton": {
+    "id": "sha256:e9d0c532ac77711c77f2550669941155e84454e37a66916cfc57a2767a0b6515",
+    "rootJoint": "pelvis",
+    "jointCount": 52,
+    "joints": [
+      "pelvis",
+      "left_hip",
+      "left_knee",
+      "left_ankle",
+      "left_foot",
+      "right_hip",
+      "right_knee",
+      "right_ankle",
+      "right_foot",
+      "spine1",
+      "spine2",
+      "spine3",
+      "left_collar",
+      "left_shoulder",
+      "left_elbow",
+      "left_wrist",
+      "left_index1",
+      "left_index2",
+      "left_index3",
+      "left_middle1",
+      "left_middle2",
+      "left_middle3",
+      "left_pinky1",
+      "left_pinky2",
+      "left_pinky3",
+      "left_ring1",
+      "left_ring2",
+      "left_ring3",
+      "left_thumb1",
+      "left_thumb2",
+      "left_thumb3",
+      "neck",
+      "head",
+      "right_collar",
+      "right_shoulder",
+      "right_elbow",
+      "right_wrist",
+      "right_index1",
+      "right_index2",
+      "right_index3",
+      "right_middle1",
+      "right_middle2",
+      "right_middle3",
+      "right_pinky1",
+      "right_pinky2",
+      "right_pinky3",
+      "right_ring1",
+      "right_ring2",
+      "right_ring3",
+      "right_thumb1",
+      "right_thumb2",
+      "right_thumb3"
+    ],
+    "identityIncludes": "joint names, parents, rest offsets normalized to meters/Y-up"
+  },
+  "timing": {
+    "fps": 30.0003,
+    "frameCount": 150,
+    "sampleSpanSeconds": 4.966617,
+    "playbackPeriodSeconds": 4.99995,
+    "frameIndexing": "zero-based; endFrame exclusive",
+    "sourceFrameOffset": 0
+  },
+  "setupFrame": {
+    "policy": "keep",
+    "firstFrameNonRootRotationsAtRest": false,
+    "removedFrames": 0,
+    "verification": "Non-root rotation channels within 0.001 degrees of rest. Removal requires explicit caller identification of an extra setup frame."
+  },
+  "preparation": {
+    "startFrame": 0,
+    "endFrame": 150,
+    "rootMotion": "in_place",
+    "positionConvention": "offset_relative",
+    "droppedAuthoredEvents": 0,
+    "outputSha256": "90061c343cf2e91068472abd89c9ac25c5e981b089d39d5510fac9d075f35aa6"
+  },
+  "rootMotion": {
+    "rootJoint": "pelvis",
+    "measuredBeforeInPlaceRemoval": true,
+    "displacementMetersYUp": [
+      -0.998261,
+      0,
+      11.410974
+    ],
+    "horizontalPathMeters": 11.461325,
+    "referenceSpeedMetersPerSecond": 2.307672,
+    "measurementSpanSeconds": 4.966617
+  },
+  "contacts": {
+    "source": "kinematic_heuristic",
+    "method": "World joint height and 3D speed; 1.35x release hysteresis; 60ms minimum interval.",
+    "confidence": "uncalibrated; inspect visually",
+    "assumptions": {
+      "leftFootJoint": "left_ankle",
+      "rightFootJoint": "right_ankle",
+      "groundHeightMeters": 0,
+      "contactHeightMeters": 0.1,
+      "contactSpeedMetersPerSecond": 0.7
+    },
+    "left": [
+      {
+        "startFrame": 2,
+        "endFrame": 6,
+        "startSeconds": 0.066666,
+        "endSeconds": 0.199998,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.455697,
+        "minimumHeightMeters": 0.049663,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 24,
+        "endFrame": 29,
+        "startSeconds": 0.799992,
+        "endSeconds": 0.966657,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.45307,
+        "minimumHeightMeters": 0.052997,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 48,
+        "endFrame": 54,
+        "startSeconds": 1.599984,
+        "endSeconds": 1.799982,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.387816,
+        "minimumHeightMeters": 0.048973,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 72,
+        "endFrame": 77,
+        "startSeconds": 2.399976,
+        "endSeconds": 2.566641,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.437717,
+        "minimumHeightMeters": 0.048193,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 95,
+        "endFrame": 99,
+        "startSeconds": 3.166635,
+        "endSeconds": 3.299967,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.488158,
+        "minimumHeightMeters": 0.045588,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 118,
+        "endFrame": 120,
+        "startSeconds": 3.933294,
+        "endSeconds": 3.99996,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.663384,
+        "minimumHeightMeters": 0.055644,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 125,
+        "endFrame": 130,
+        "startSeconds": 4.166625,
+        "endSeconds": 4.33329,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.538458,
+        "minimumHeightMeters": 0.068057,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      }
+    ],
+    "right": [
+      {
+        "startFrame": 13,
+        "endFrame": 17,
+        "startSeconds": 0.433329,
+        "endSeconds": 0.566661,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.497593,
+        "minimumHeightMeters": 0.061412,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 36,
+        "endFrame": 41,
+        "startSeconds": 1.199988,
+        "endSeconds": 1.366653,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.374595,
+        "minimumHeightMeters": 0.063779,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 60,
+        "endFrame": 65,
+        "startSeconds": 1.99998,
+        "endSeconds": 2.166645,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.35037,
+        "minimumHeightMeters": 0.062537,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 84,
+        "endFrame": 88,
+        "startSeconds": 2.799972,
+        "endSeconds": 2.933304,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.503896,
+        "minimumHeightMeters": 0.061602,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 106,
+        "endFrame": 112,
+        "startSeconds": 3.533298,
+        "endSeconds": 3.733296,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.520723,
+        "minimumHeightMeters": 0.066426,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 143,
+        "endFrame": 145,
+        "startSeconds": 4.766619,
+        "endSeconds": 4.833285,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.692547,
+        "minimumHeightMeters": 0.092449,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      }
+    ]
+  },
+  "strides": {
+    "source": "kinematic_heuristic",
+    "left": {
+      "cycles": [
+        {
+          "startFrame": 2,
+          "endFrame": 24,
+          "seconds": 0.733326,
+          "distanceMeters": 1.701984
+        },
+        {
+          "startFrame": 24,
+          "endFrame": 48,
+          "seconds": 0.799992,
+          "distanceMeters": 1.790584
+        },
+        {
+          "startFrame": 48,
+          "endFrame": 72,
+          "seconds": 0.799992,
+          "distanceMeters": 1.752651
+        },
+        {
+          "startFrame": 72,
+          "endFrame": 95,
+          "seconds": 0.766659,
+          "distanceMeters": 1.818079
+        },
+        {
+          "startFrame": 95,
+          "endFrame": 118,
+          "seconds": 0.766659,
+          "distanceMeters": 1.800511
+        },
+        {
+          "startFrame": 118,
+          "endFrame": 125,
+          "seconds": 0.233331,
+          "distanceMeters": 0.528444
+        }
+      ],
+      "meanSeconds": 0.6833264999999998,
+      "meanDistanceMeters": 1.5653755
+    },
+    "right": {
+      "cycles": [
+        {
+          "startFrame": 13,
+          "endFrame": 36,
+          "seconds": 0.766659,
+          "distanceMeters": 1.767194
+        },
+        {
+          "startFrame": 36,
+          "endFrame": 60,
+          "seconds": 0.799992,
+          "distanceMeters": 1.747533
+        },
+        {
+          "startFrame": 60,
+          "endFrame": 84,
+          "seconds": 0.799992,
+          "distanceMeters": 1.809544
+        },
+        {
+          "startFrame": 84,
+          "endFrame": 106,
+          "seconds": 0.733326,
+          "distanceMeters": 1.816458
+        },
+        {
+          "startFrame": 106,
+          "endFrame": 143,
+          "seconds": 1.233321,
+          "distanceMeters": 2.772323
+        }
+      ],
+      "meanSeconds": 0.8666579999999999,
+      "meanDistanceMeters": 1.9826104
+    }
+  },
+  "flightCandidates": [
+    {
+      "startFrame": 7,
+      "endFrame": 10,
+      "startSeconds": 0.233331,
+      "endSeconds": 0.33333,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 18,
+      "endFrame": 22,
+      "startSeconds": 0.599994,
+      "endSeconds": 0.733326,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 30,
+      "endFrame": 34,
+      "startSeconds": 0.99999,
+      "endSeconds": 1.133322,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 42,
+      "endFrame": 46,
+      "startSeconds": 1.399986,
+      "endSeconds": 1.533318,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 55,
+      "endFrame": 57,
+      "startSeconds": 1.833315,
+      "endSeconds": 1.899981,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 65,
+      "endFrame": 69,
+      "startSeconds": 2.166645,
+      "endSeconds": 2.299977,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 78,
+      "endFrame": 81,
+      "startSeconds": 2.599974,
+      "endSeconds": 2.699973,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 89,
+      "endFrame": 92,
+      "startSeconds": 2.966637,
+      "endSeconds": 3.066636,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 101,
+      "endFrame": 104,
+      "startSeconds": 3.366633,
+      "endSeconds": 3.466632,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 112,
+      "endFrame": 115,
+      "startSeconds": 3.733296,
+      "endSeconds": 3.833295,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 130,
+      "endFrame": 142,
+      "startSeconds": 4.33329,
+      "endSeconds": 4.733286,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "startFrame": 145,
+      "endFrame": 148,
+      "startSeconds": 4.833285,
+      "endSeconds": 4.933284,
+      "source": "kinematic_heuristic"
+    }
+  ],
+  "loopSeam": {
+    "source": "measured_sample_endpoints",
+    "maximumJointAngleDegrees": 0.196023,
+    "worstJoints": [
+      {
+        "joint": "left_pinky3",
+        "degrees": 0.196023
+      },
+      {
+        "joint": "left_thumb2",
+        "degrees": 0.133788
+      },
+      {
+        "joint": "left_thumb3",
+        "degrees": 0.081164
+      },
+      {
+        "joint": "left_ring3",
+        "degrees": 0.075679
+      },
+      {
+        "joint": "left_pinky2",
+        "degrees": 0.046996
+      }
+    ],
+    "rootVelocityMismatchMetersPerSecond": 0.757928,
+    "rootTranslationWrapMeters": 11.454556,
+    "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
+  },
+  "events": [
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 2,
+      "seconds": 0.066666,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 7,
+      "seconds": 0.233331,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 10,
+      "seconds": 0.33333,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 13,
+      "seconds": 0.433329,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 18,
+      "seconds": 0.599994,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 22,
+      "seconds": 0.733326,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 24,
+      "seconds": 0.799992,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 30,
+      "seconds": 0.99999,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 34,
+      "seconds": 1.133322,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 36,
+      "seconds": 1.199988,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 42,
+      "seconds": 1.399986,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 46,
+      "seconds": 1.533318,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 48,
+      "seconds": 1.599984,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 55,
+      "seconds": 1.833315,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 57,
+      "seconds": 1.899981,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 60,
+      "seconds": 1.99998,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 65,
+      "seconds": 2.166645,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 69,
+      "seconds": 2.299977,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 72,
+      "seconds": 2.399976,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 78,
+      "seconds": 2.599974,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 81,
+      "seconds": 2.699973,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 84,
+      "seconds": 2.799972,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 89,
+      "seconds": 2.966637,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 92,
+      "seconds": 3.066636,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 95,
+      "seconds": 3.166635,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 101,
+      "seconds": 3.366633,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 104,
+      "seconds": 3.466632,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 106,
+      "seconds": 3.533298,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 112,
+      "seconds": 3.733296,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 115,
+      "seconds": 3.833295,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 118,
+      "seconds": 3.933294,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 125,
+      "seconds": 4.166625,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 130,
+      "seconds": 4.33329,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 142,
+      "seconds": 4.733286,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 143,
+      "seconds": 4.766619,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_start_candidate",
+      "frame": 145,
+      "seconds": 4.833285,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 148,
+      "seconds": 4.933284,
+      "source": "kinematic_heuristic"
+    }
+  ],
+  "warnings": [
+    "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
+  ]
+}

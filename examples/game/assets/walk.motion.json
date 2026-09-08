@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha256": "1f9703ae1caa8abaddae2fb5837476edd317b1fcda237bf9ba02c3cfd5ff3af0",
+    "frameCount": 150,
+    "units": "meters",
+    "upAxis": "Y",
+    "positionConvention": "absolute_local",
+    "provenance": {
+      "motionID": "mogen-job-1788893016-N634-01M215AFN2H7DAFW7C6WA10M3G",
+      "characterID": "char-upload-Mani",
+      "model": "swing",
+      "prompt": "A person walking straight forward at a comfortable steady pace with natural alternating arm swing, continuous even strides, no turns, no pauses."
+    }
+  },
+  "skeleton": {
+    "id": "sha256:e9d0c532ac77711c77f2550669941155e84454e37a66916cfc57a2767a0b6515",
+    "rootJoint": "pelvis",
+    "jointCount": 52,
+    "joints": [
+      "pelvis",
+      "left_hip",
+      "left_knee",
+      "left_ankle",
+      "left_foot",
+      "right_hip",
+      "right_knee",
+      "right_ankle",
+      "right_foot",
+      "spine1",
+      "spine2",
+      "spine3",
+      "left_collar",
+      "left_shoulder",
+      "left_elbow",
+      "left_wrist",
+      "left_index1",
+      "left_index2",
+      "left_index3",
+      "left_middle1",
+      "left_middle2",
+      "left_middle3",
+      "left_pinky1",
+      "left_pinky2",
+      "left_pinky3",
+      "left_ring1",
+      "left_ring2",
+      "left_ring3",
+      "left_thumb1",
+      "left_thumb2",
+      "left_thumb3",
+      "neck",
+      "head",
+      "right_collar",
+      "right_shoulder",
+      "right_elbow",
+      "right_wrist",
+      "right_index1",
+      "right_index2",
+      "right_index3",
+      "right_middle1",
+      "right_middle2",
+      "right_middle3",
+      "right_pinky1",
+      "right_pinky2",
+      "right_pinky3",
+      "right_ring1",
+      "right_ring2",
+      "right_ring3",
+      "right_thumb1",
+      "right_thumb2",
+      "right_thumb3"
+    ],
+    "identityIncludes": "joint names, parents, rest offsets normalized to meters/Y-up"
+  },
+  "timing": {
+    "fps": 30.0003,
+    "frameCount": 150,
+    "sampleSpanSeconds": 4.966617,
+    "playbackPeriodSeconds": 4.99995,
+    "frameIndexing": "zero-based; endFrame exclusive",
+    "sourceFrameOffset": 0
+  },
+  "setupFrame": {
+    "policy": "keep",
+    "firstFrameNonRootRotationsAtRest": false,
+    "removedFrames": 0,
+    "verification": "Non-root rotation channels within 0.001 degrees of rest. Removal requires explicit caller identification of an extra setup frame."
+  },
+  "preparation": {
+    "startFrame": 0,
+    "endFrame": 150,
+    "rootMotion": "in_place",
+    "positionConvention": "offset_relative",
+    "droppedAuthoredEvents": 0,
+    "outputSha256": "6038e29f290aa252ce37c0a458e12e4587572503831004f6dba8579da3122f3b"
+  },
+  "rootMotion": {
+    "rootJoint": "pelvis",
+    "measuredBeforeInPlaceRemoval": true,
+    "displacementMetersYUp": [
+      -0.403582,
+      0,
+      5.416548
+    ],
+    "horizontalPathMeters": 5.442592,
+    "referenceSpeedMetersPerSecond": 1.095835,
+    "measurementSpanSeconds": 4.966617
+  },
+  "contacts": {
+    "source": "kinematic_heuristic",
+    "method": "World joint height and 3D speed; 1.35x release hysteresis; 60ms minimum interval.",
+    "confidence": "uncalibrated; inspect visually",
+    "assumptions": {
+      "leftFootJoint": "left_ankle",
+      "rightFootJoint": "right_ankle",
+      "groundHeightMeters": 0,
+      "contactHeightMeters": 0.1,
+      "contactSpeedMetersPerSecond": 0.25
+    },
+    "left": [
+      {
+        "startFrame": 15,
+        "endFrame": 30,
+        "startSeconds": 0.499995,
+        "endSeconds": 0.99999,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.168651,
+        "minimumHeightMeters": 0.057332,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 50,
+        "endFrame": 66,
+        "startSeconds": 1.66665,
+        "endSeconds": 2.199978,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.115185,
+        "minimumHeightMeters": 0.04258,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 86,
+        "endFrame": 102,
+        "startSeconds": 2.866638,
+        "endSeconds": 3.399966,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.140589,
+        "minimumHeightMeters": 0.044914,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 125,
+        "endFrame": 145,
+        "startSeconds": 4.166625,
+        "endSeconds": 4.833285,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.137061,
+        "minimumHeightMeters": 0.048722,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      }
+    ],
+    "right": [
+      {
+        "startFrame": 3,
+        "endFrame": 12,
+        "startSeconds": 0.099999,
+        "endSeconds": 0.399996,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.108266,
+        "minimumHeightMeters": 0.043384,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 33,
+        "endFrame": 48,
+        "startSeconds": 1.099989,
+        "endSeconds": 1.599984,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.13388,
+        "minimumHeightMeters": 0.049217,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 68,
+        "endFrame": 84,
+        "startSeconds": 2.266644,
+        "endSeconds": 2.799972,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.096475,
+        "minimumHeightMeters": 0.037649,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 105,
+        "endFrame": 120,
+        "startSeconds": 3.499965,
+        "endSeconds": 3.99996,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.130667,
+        "minimumHeightMeters": 0.035075,
+        "beginsBeforeClip": false,
+        "continuesAfterClip": false
+      }
+    ]
+  },
+  "strides": {
+    "source": "kinematic_heuristic",
+    "left": {
+      "cycles": [
+        {
+          "startFrame": 15,
+          "endFrame": 50,
+          "seconds": 1.166655,
+          "distanceMeters": 1.372627
+        },
+        {
+          "startFrame": 50,
+          "endFrame": 86,
+          "seconds": 1.199988,
+          "distanceMeters": 1.34685
+        },
+        {
+          "startFrame": 86,
+          "endFrame": 125,
+          "seconds": 1.299987,
+          "distanceMeters": 1.369857
+        }
+      ],
+      "meanSeconds": 1.2222099999999998,
+      "meanDistanceMeters": 1.3631113333333336
+    },
+    "right": {
+      "cycles": [
+        {
+          "startFrame": 3,
+          "endFrame": 33,
+          "seconds": 0.99999,
+          "distanceMeters": 1.199666
+        },
+        {
+          "startFrame": 33,
+          "endFrame": 68,
+          "seconds": 1.166655,
+          "distanceMeters": 1.322801
+        },
+        {
+          "startFrame": 68,
+          "endFrame": 105,
+          "seconds": 1.233321,
+          "distanceMeters": 1.425481
+        }
+      ],
+      "meanSeconds": 1.133322,
+      "meanDistanceMeters": 1.3159826666666665
+    }
+  },
+  "flightCandidates": [],
+  "loopSeam": {
+    "source": "measured_sample_endpoints",
+    "maximumJointAngleDegrees": 1.377348,
+    "worstJoints": [
+      {
+        "joint": "left_wrist",
+        "degrees": 1.377348
+      },
+      {
+        "joint": "left_shoulder",
+        "degrees": 1.326028
+      },
+      {
+        "joint": "right_shoulder",
+        "degrees": 0.697044
+      },
+      {
+        "joint": "right_wrist",
+        "degrees": 0.644325
+      },
+      {
+        "joint": "right_index1",
+        "degrees": 0.197972
+      }
+    ],
+    "rootVelocityMismatchMetersPerSecond": 0.383991,
+    "rootTranslationWrapMeters": 5.431562,
+    "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
+  },
+  "events": [
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 3,
+      "seconds": 0.099999,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 15,
+      "seconds": 0.499995,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 33,
+      "seconds": 1.099989,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 50,
+      "seconds": 1.66665,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 68,
+      "seconds": 2.266644,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 86,
+      "seconds": 2.866638,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
+      "frame": 105,
+      "seconds": 3.499965,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 125,
+      "seconds": 4.166625,
+      "source": "kinematic_heuristic"
+    }
+  ],
+  "warnings": [
+    "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
+  ]
+}

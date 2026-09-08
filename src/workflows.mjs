@@ -10,6 +10,8 @@ export const workflowUri = 'cartwheel://workflows/blender';
 export const workflowPrompt = 'grounded_blender_scene';
 export const comicWorkflowUri = 'cartwheel://workflows/comic4';
 export const comicWorkflowPrompt = 'comic4_blender_scene';
+export const gameWorkflowUri = 'cartwheel://workflows/game';
+export const gameWorkflowPrompt = 'game_ready_animation';
 const workflows = [
   { uri: workflowUri, prompt: workflowPrompt, name: 'grounded_blender_workflow',
     title: 'Grounded Cartwheel → Blender',
@@ -19,6 +21,10 @@ const workflows = [
     title: 'Comic 4 → editable Blender performance',
     description: 'Upload a video, capture up to four actors with faces, preserve their shared placement, and reveal a new camera angle.',
     file: 'comic4.md', directory: 'comic4' },
+  { uri: gameWorkflowUri, prompt: gameWorkflowPrompt, name: 'game_animation_workflow',
+    title: 'Cartwheel → playable game animation',
+    description: 'Edit, loop, stitch, prepare verified clips and metadata, and run the complete Three.js game reference.',
+    file: 'game.md', directory: 'game' },
 ].map(w => ({ ...w, text: `${readFileSync(new URL(`./workflows/${w.file}`, import.meta.url), 'utf8')}\nInstalled example directory: ${fileURLToPath(new URL(`../examples/${w.directory}/`, import.meta.url))}\n` }));
 const invalid = message => new McpError(ErrorCode.InvalidParams, message);
 
@@ -39,7 +45,7 @@ export function registerWorkflows(server) {
     const w = workflows.find(w => w.prompt === params.name);
     if (!w) throw invalid('Unknown Cartwheel prompt');
     const args = params.arguments ?? {};
-    if (Object.keys(args).some(key => key !== 'scene')) throw invalid('Unknown Blender workflow argument');
+    if (Object.keys(args).some(key => key !== 'scene')) throw invalid('Unknown workflow argument');
     if (args.scene !== undefined && (typeof args.scene !== 'string' || args.scene.length > 4000)) {
       throw invalid('Scene description must be a string of at most 4000 characters');
     }

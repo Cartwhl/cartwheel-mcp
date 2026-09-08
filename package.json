@@ -1,6 +1,6 @@
 {
   "name": "@cartwhl/mcp-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Generate 3D animation with Cartwheel from MCP clients.",
   "type": "module",
   "license": "MIT",
@@ -19,12 +19,22 @@
     "examples/blender/assets/*.bvh",
     "examples/comic4/*.mjs",
     "examples/comic4/*.py",
-    "examples/comic4/README.md"
+    "examples/comic4/README.md",
+    "examples/game/*.mjs",
+    "examples/game/*.html",
+    "examples/game/*.css",
+    "examples/game/*.json",
+    "examples/game/README.md",
+    "examples/game/ASSETS.md",
+    "examples/game/assets/*.glb",
+    "examples/game/assets/*.bvh",
+    "examples/game/assets/*.json"
   ],
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.mjs",
-    "test": "node --test",
-    "check:package": "npm pack --dry-run"
+    "test": "node --test test/*.test.mjs",
+    "check:package": "npm pack --dry-run",
+    "example:game": "node examples/game/serve.mjs"
   },
   "repository": {
     "type": "git",
@@ -43,6 +53,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "ajv": "^8.20.0"
+    "ajv": "^8.20.0",
+    "three": "0.185.1"
   }
 }

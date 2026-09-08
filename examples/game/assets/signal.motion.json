@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha256": "da3731dab128a6ee58c3e16b805f97936039b28ba2f91a9bf5261f89e6e41867",
+    "frameCount": 120,
+    "units": "meters",
+    "upAxis": "Y",
+    "positionConvention": "absolute_local",
+    "provenance": {
+      "motionID": "mogen-job-1788893022-6XGS-01M215AJJPH7BP6DE6JFTPH7BR",
+      "characterID": "char-upload-Mani",
+      "model": "swing",
+      "prompt": "A person standing still raises their right arm and waves hello with their right hand, then lowers their arm back to their side. Their feet stay planted, face forward, relaxed friendly greeting."
+    }
+  },
+  "skeleton": {
+    "id": "sha256:e9d0c532ac77711c77f2550669941155e84454e37a66916cfc57a2767a0b6515",
+    "rootJoint": "pelvis",
+    "jointCount": 52,
+    "joints": [
+      "pelvis",
+      "left_hip",
+      "left_knee",
+      "left_ankle",
+      "left_foot",
+      "right_hip",
+      "right_knee",
+      "right_ankle",
+      "right_foot",
+      "spine1",
+      "spine2",
+      "spine3",
+      "left_collar",
+      "left_shoulder",
+      "left_elbow",
+      "left_wrist",
+      "left_index1",
+      "left_index2",
+      "left_index3",
+      "left_middle1",
+      "left_middle2",
+      "left_middle3",
+      "left_pinky1",
+      "left_pinky2",
+      "left_pinky3",
+      "left_ring1",
+      "left_ring2",
+      "left_ring3",
+      "left_thumb1",
+      "left_thumb2",
+      "left_thumb3",
+      "neck",
+      "head",
+      "right_collar",
+      "right_shoulder",
+      "right_elbow",
+      "right_wrist",
+      "right_index1",
+      "right_index2",
+      "right_index3",
+      "right_middle1",
+      "right_middle2",
+      "right_middle3",
+      "right_pinky1",
+      "right_pinky2",
+      "right_pinky3",
+      "right_ring1",
+      "right_ring2",
+      "right_ring3",
+      "right_thumb1",
+      "right_thumb2",
+      "right_thumb3"
+    ],
+    "identityIncludes": "joint names, parents, rest offsets normalized to meters/Y-up"
+  },
+  "timing": {
+    "fps": 30.0003,
+    "frameCount": 120,
+    "sampleSpanSeconds": 3.966627,
+    "playbackPeriodSeconds": 3.99996,
+    "frameIndexing": "zero-based; endFrame exclusive",
+    "sourceFrameOffset": 0
+  },
+  "setupFrame": {
+    "policy": "keep",
+    "firstFrameNonRootRotationsAtRest": false,
+    "removedFrames": 0,
+    "verification": "Non-root rotation channels within 0.001 degrees of rest. Removal requires explicit caller identification of an extra setup frame."
+  },
+  "preparation": {
+    "startFrame": 0,
+    "endFrame": 120,
+    "rootMotion": "in_place",
+    "positionConvention": "offset_relative",
+    "droppedAuthoredEvents": 0,
+    "outputSha256": "1d158f4b23b3fe9eb32bd247aef354fd4efc0dc1fae3407573d13b9df17ed812"
+  },
+  "rootMotion": {
+    "rootJoint": "pelvis",
+    "measuredBeforeInPlaceRemoval": true,
+    "displacementMetersYUp": [
+      -0.005055,
+      -0.00401,
+      0.019965
+    ],
+    "horizontalPathMeters": 0.10077,
+    "referenceSpeedMetersPerSecond": 0.025404,
+    "measurementSpanSeconds": 3.966627
+  },
+  "contacts": {
+    "source": "kinematic_heuristic",
+    "method": "World joint height and 3D speed; 1.35x release hysteresis; 60ms minimum interval.",
+    "confidence": "uncalibrated; inspect visually",
+    "assumptions": {
+      "leftFootJoint": "left_ankle",
+      "rightFootJoint": "right_ankle",
+      "groundHeightMeters": 0,
+      "contactHeightMeters": 0.1,
+      "contactSpeedMetersPerSecond": 0.25
+    },
+    "left": [
+      {
+        "startFrame": 0,
+        "endFrame": 120,
+        "startSeconds": 0,
+        "endSeconds": 3.99996,
+        "joint": "left_ankle",
+        "meanSpeedMetersPerSecond": 0.023394,
+        "minimumHeightMeters": 0.013772,
+        "beginsBeforeClip": true,
+        "continuesAfterClip": true
+      }
+    ],
+    "right": [
+      {
+        "startFrame": 0,
+        "endFrame": 120,
+        "startSeconds": 0,
+        "endSeconds": 3.99996,
+        "joint": "right_ankle",
+        "meanSpeedMetersPerSecond": 0.023343,
+        "minimumHeightMeters": 0.016947,
+        "beginsBeforeClip": true,
+        "continuesAfterClip": true
+      }
+    ]
+  },
+  "strides": {
+    "source": "kinematic_heuristic",
+    "left": {
+      "cycles": [],
+      "meanSeconds": null,
+      "meanDistanceMeters": null
+    },
+    "right": {
+      "cycles": [],
+      "meanSeconds": null,
+      "meanDistanceMeters": null
+    }
+  },
+  "flightCandidates": [],
+  "loopSeam": {
+    "source": "measured_sample_endpoints",
+    "maximumJointAngleDegrees": 30.482152,
+    "worstJoints": [
+      {
+        "joint": "right_wrist",
+        "degrees": 30.482152
+      },
+      {
+        "joint": "right_shoulder",
+        "degrees": 25.349002
+      },
+      {
+        "joint": "left_shoulder",
+        "degrees": 5.936281
+      },
+      {
+        "joint": "left_collar",
+        "degrees": 5.089016
+      },
+      {
+        "joint": "head",
+        "degrees": 5.048609
+      }
+    ],
+    "rootVelocityMismatchMetersPerSecond": 0.106446,
+    "rootTranslationWrapMeters": 0.020982,
+    "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
+  },
+  "events": [
+    {
+      "name": "signal",
+      "frame": 35,
+      "seconds": 1.166655,
+      "source": "authored"
+    }
+  ],
+  "warnings": [
+    "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
+  ]
+}
