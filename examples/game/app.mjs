@@ -6,7 +6,6 @@ import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { MovementController, SignalClock, gaitProfile, timeAtPhase, orbitIntent, clamp } from './controller.mjs';
 import { cycleClip, splitBodyClip, centerRootMotion } from './playback.mjs';
 import { readMHRCorrectives, bindMHRCorrectives } from './mhr-rig.mjs';
-import { remapJointFrames } from './rest-pose.mjs';
 
 const $ = id => document.getElementById(id);
 const canvas = $('view');
@@ -89,7 +88,7 @@ $('details').addEventListener('click', () => $('source-dialog').showModal());
 $('close-details').addEventListener('click', () => $('source-dialog').close());
 $('source-dialog').addEventListener('click', e => { if (e.target === $('source-dialog')) $('source-dialog').close(); });
 
-let player, actors = [], clips, metadata, profiles, model, cycles, bodyClips, poseData, retargetReference, compactView = false;
+let player, actors = [], clips, metadata, profiles, model, cycles, bodyClips, poseData, compactView = false;
 let closeView = new URLSearchParams(location.search).get('close') === '1';
 const modulo = (n, d) => ((n % d) + d) % d;
 const v = new THREE.Vector3(), q = new THREE.Quaternion();
@@ -120,8 +119,6 @@ async function loadClip(name) {
     if (!target?.isBone) throw Error(`Character is missing joint ${bone.name}.`);
     if (bone !== bvh.skeleton.bones[0] && target.position.distanceTo(bone.position) > .0001) throw Error(`Rest offset mismatch at ${bone.name}; retarget to this character before playback.`);
   }
-  if (m.retargetReference !== retargetReference.id || retargetReference.reviewedClips[name] !== sha) throw Error(`Review the retarget reference for ${name} before playback; this calibration is specific to these Swing exports.`);
-  remapJointFrames(bvh.clip, model, retargetReference.joints);
   model.updateMatrixWorld(true);
   const parentInverse = root.parent.matrixWorld.clone().invert();
   const parentRotationInverse = root.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
@@ -212,7 +209,7 @@ function actorStep(actor, dt, intent) {
 }
 
 async function initialize() {
-  const [gltf, correctives, reference] = await Promise.all([new GLTFLoader().loadAsync('assets/character.glb'), fetch('assets/mhr-correctives.json').then(r => r.json()), fetch('assets/swing-mhr-reference.json').then(r => r.json())]); model = gltf.scene; poseData = readMHRCorrectives(correctives); retargetReference = reference;
+  const [gltf, correctives] = await Promise.all([new GLTFLoader().loadAsync('assets/character.glb'), fetch('assets/mhr-correctives.json').then(r => r.json())]); model = gltf.scene; poseData = readMHRCorrectives(correctives);
   model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; } });
   const loaded = Object.fromEntries(await Promise.all(['idle', 'walk', 'run', 'signal'].map(async name => [name, await loadClip(name)])));
   metadata = Object.fromEntries(Object.entries(loaded).map(([name, value]) => [name, value.metadata]));

@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { bindMHRCorrectives, readMHRCorrectives } from '../examples/game/mhr-rig.mjs';
-import { remapJointFrames } from '../examples/game/rest-pose.mjs';
+import { createHash } from 'node:crypto';
 
 test('MHR full-body deformation matches official dense model poses and clones keep separate buffers', async () => {
   const bytes = readFileSync(new URL('../examples/game/assets/character.glb', import.meta.url));
@@ -38,41 +38,30 @@ test('MHR full-body deformation matches official dense model poses and clones ke
   }
 });
 
-test('MHR shoulder frames follow source anatomy in real clips while arm rotations and lower body remain intact', async () => {
+// An unmodified embedded animation is independent of the BVH preparation path.
+// It also contains the known retarget defects: matching it is NOT visual approval.
+test('prepared MHR playback preserves untouched animated-export poses', async () => {
   const asset = name => readFileSync(new URL(`../examples/game/assets/${name}`, import.meta.url));
   const bytes = asset('character.glb');
   const model = (await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '')).scene;
-  const reference = JSON.parse(asset('swing-mhr-reference.json'));
-  const golden = JSON.parse(readFileSync(new URL('fixtures/mhr-shoulders.json', import.meta.url)));
-  let largestDirectionError = 0;
-  for (const name of ['idle', 'walk', 'run', 'signal']) {
-    const raw = new BVHLoader().parse(asset(`${name}.bvh`).toString()).clip;
-    const fixed = raw.clone();
-    remapJointFrames(fixed, model, reference.joints);
-    for (const track of raw.tracks) if (!/^[lr]_(clavicle|uparm)\.quaternion$/.test(track.name)) assert.deepEqual(fixed.tracks.find(t => t.name === track.name).values, track.values);
-    const avatars = [clone(model), clone(model)];
-    const mixers = [raw, fixed].map((clip, i) => {
-      const mixer = new AnimationMixer(avatars[i]), action = mixer.clipAction(clip);
-      action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; action.play(); return mixer;
-    });
-    for (const pose of golden.cases.filter(c => c.clip === name)) {
-      mixers.forEach(m => m.setTime(pose.frame * .033333)); avatars.forEach(a => a.updateMatrixWorld(true));
-      for (const side of ['l', 'r']) {
-        const position = (a, n) => a.getObjectByName(n).getWorldPosition(new Vector3());
-        const direction = position(avatars[1], `${side}_uparm`).sub(position(avatars[1], `${side}_clavicle`)).normalize();
-        const error = direction.angleTo(new Vector3(...pose.directions[side]));
-        largestDirectionError = Math.max(largestDirectionError, error);
-        assert.ok(error < Math.PI / 180, `${name}/${pose.frame}/${side}: shoulder direction error ${error * 180 / Math.PI} degrees`);
-        for (const joint of ['uparm', 'lowarm', 'wrist', 'uparm_twist0_proc', 'lowleg', 'talocrural']) {
-          const rotations = avatars.map(a => a.getObjectByName(`${side}_${joint}`).getWorldQuaternion(new Quaternion()).normalize());
-          assert.ok(rotations[0].angleTo(rotations[1]) < 1e-5, `world arm/leg orientation: ${joint}`);
-        }
-        for (const joint of ['upleg', 'lowleg', 'talocrural']) assert.ok(position(avatars[0], `${side}_${joint}`).distanceTo(position(avatars[1], `${side}_${joint}`)) < 1e-6);
+  const baseline = JSON.parse(readFileSync(new URL('fixtures/mhr-export-baseline.json', import.meta.url)));
+  for (const motion of baseline.motions) {
+    const text = asset(`${motion.name}.bvh`);
+    assert.equal(createHash('sha256').update(text).digest('hex'), motion.preparedSha256);
+    const metadata = JSON.parse(asset(`${motion.name}.motion.json`));
+    const avatar = clone(model), clip = new BVHLoader().parse(text.toString()).clip;
+    const mixer = new AnimationMixer(avatar), action = mixer.clipAction(clip);
+    action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; action.play();
+    for (const pose of motion.poses) {
+      mixer.setTime(pose.frame / metadata.timing.fps);
+      for (const [name, expected] of Object.entries(pose.joints)) {
+        const bone = avatar.getObjectByName(name);
+        assert.ok(bone?.isBone, name);
+        assert.ok(bone.position.distanceTo(new Vector3(...expected.position)) < 1e-6, `${motion.name}/${pose.frame}/${name}: position differs from unmodified export`);
+        // Independent GLB/BVH exports differ by up to 0.363 degrees in these
+        // samples. Bound fidelity to half a degree; do not call it equality.
+        assert.ok(bone.quaternion.clone().normalize().angleTo(new Quaternion(...expected.rotation)) < Math.PI / 360, `${motion.name}/${pose.frame}/${name}: rotation differs from unmodified export`);
       }
     }
   }
-  assert.ok(largestDirectionError < Math.PI / 180);
-  const invalid = clone(model); invalid.getObjectByName('l_clavicle').quaternion.identity();
-  const clip = new BVHLoader().parse(asset('idle.bvh').toString()).clip;
-  assert.throws(() => remapJointFrames(clip, invalid, reference.joints), /Rest-frame contract changed/);
 });

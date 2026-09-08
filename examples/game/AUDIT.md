@@ -12,30 +12,29 @@ The first game reference used Mani and four generated Swing clips. Review expose
 | Stride averages included non-alternating contact candidates. | Preserve those candidates with warnings, and exclude them from alternating-stride averages. |
 | Keyboard movement was suppressed after interacting with the crowd slider. | Text editing retains focus protection; movement keys work after range/checkbox controls. Range arrow keys retain their normal behavior. |
 
-## Character and source review
+## Current status: MHR visual review failed
 
-The reference now uses **MHR**, using native MCP exports of four Swing performances. It preserves the character’s static identity and original native skeletal weights. The released MHR full-body pose corrections run on the final blended pose, including during transitions, rather than being baked for a single animation.
+The MHR demo is **not visually approved**. The previous shoulder correction was rejected in review and has been removed. The API tools and controller fixes above remain; none of those checks established acceptable character animation.
 
-The approved source region for walking is frames **57–93**, with phase marker **85**; running uses **68–91**, with phase marker **72**. Both use a symmetric blend spanning three frames on either side of the boundary. These choices are specific to these performances, recorded with the source hash in each `.motion.json`. New performances require their own review. No global motion filter or foot-lock IK is applied.
+### What the controlled comparison established
 
-The prepared BVHs retain the source joint rotation channels. The MCP did not create the demonstrated contact-driven time warping; the game controller did. The uneven generated loop ending is excluded from the playable cycle. This does not establish whether that source defect originated in generation, loop processing, or retargeting.
+1. **The defect exists in an untouched export.** `get_motion` returned self-contained animated MHR GLBs for the same idle and walk IDs. Playing the idle GLB directly, with its embedded rig and animation, reproduces the arms collapsing into the torso. No BVH preparation, game controller, pose correctives, body mask or shoulder adjustment is needed to reproduce it.
+2. **BVH preparation preserves the exported pose closely.** Eight sampled poses across the two independent GLB/BVH downloads agree across 127 joints within 0.363 degrees and 0.000001 meters in local transforms. `test/fixtures/mhr-export-baseline.json` records the export hashes and observations. This bounds import fidelity at those samples; it is not a quality score or a complete temporal audit.
+3. **The shoulder adjustment was not a valid general retarget repair.** It forced MHR's collar-to-shoulder direction to match the source character and compensated the arm rotation. That moved the arms outward but created raised, bulky shoulders. Different rigs' internal joint directions are not interchangeable anatomical targets. The test asserting that forced direction reproduced the adjustment's assumption, not a visually correct MHR pose. The adjustment, calibration, metadata opt-in and that test were removed.
+4. **Hand contact did not survive the character change.** In the selected idle, the hands meet on the source Mani export but separate on MHR. Sampled palm orientation also differs by roughly 8–12 degrees. Copying rotations between different proportions does not guarantee clasped-hand contact. This is a poor idle to approve without reviewing the retargeted hands.
+5. **The demo changes the performance further.** A right-arm-only signal mask discards the generated torso and opposite-arm follow-through. The locomotion preview repeats a single short stride. These are controller demonstrations, not evidence that the complete performances remain compelling after layering.
+6. **The deformation pass has a performance cost.** The previous local Chrome run measured approximately 60 fps for one character and 22–25 fps for nine with full pose corrections. Low frame rate can add visible stutter. The fresh post-removal smoke check measured 60 fps for one and 53 fps for nine; the runs are not a controlled performance comparison. Removing or changing pose correctives in isolation did not repair the underlying shoulder/contact defect.
 
-## Follow-up: shoulder reference poses
+The stock MHR rest skeleton and inverse bind matrices agree to approximately 0.0000002 per matrix element. Rebinding the mesh or repainting weights is therefore not justified by the evidence gathered here. The remaining defect involves retargeted pose/body compatibility and contact preservation; the exact hosted-retargeter repair is unresolved. This comparison does **not** establish that Swing generation itself caused the problem, or certify the full MCP implementation as defect-free.
 
-The initial review missed a real shoulder defect. MHR's native rest transforms and inverse bind matrices agree, but the raw Swing-to-MHR exports pull the collarbones inward and backward. Matching names and offsets did not catch this. Inspection of the retargeter and source performances showed that it transfers collarbone rotation deltas between different anatomical reference directions: the source collarbone points outward and upward, while MHR's reference points outward and backward.
+### Review order before promoting this demo
 
-`rest-pose.mjs` applies a constant reference-frame correction to each clavicle and the inverse correction to its upper-arm child. The anatomical frame is derived from collar-to-shoulder geometry and projected world up; no animation frame is selected as an assumed rest pose. The child compensation preserves world-space arm rotations, including twist bones. Lower-body tracks, root motion and key timing remain unchanged. This runs once before cycle preparation and blending.
+- Play the self-contained animated export before preparing animation-only files. Compare it with the same performance on the source character. Preserve both original files and their hashes privately.
+- Review rest, arms down, arms raised, wrists, finger bends and contacts in front/side views. A skin that is correct at rest can still receive an unsuitable retargeted pose.
+- Resolve the MHR retarget and select a performance that survives the change in proportions. Review the complete clip at source cadence before introducing trimming, cycles, speed matching or a body mask.
+- Add each controller feature separately and compare with that baseline. Review gesture follow-through and hands as well as feet. Measure frame rate at the intended crowd size.
+- Obtain visual approval of the resulting animation before treating the bundled MHR assets as recommended defaults.
 
-`assets/swing-mhr-reference.json` records the reference rotations and reviewed BVH hashes. Each sidecar opts into that calibration. It is specific to these exports; it must not be applied automatically to native Comic MHR captures or a different retarget reference. This corrects the bundled consumer, **not the hosted retarget service**. New source/target rigs require their own verified reference frames.
+### Automated coverage and its limits
 
-The original idle also put the hands through MHR's hips. Two replacement idles and one new greeting were generated through MCP; the clearer idle was selected. The greeting mask now includes only the right clavicle and arm, preserving the left arm's base pose instead of replacing it with the greeting take's unused left-arm pose.
-
-The earlier knee-only deformation model also omitted MHR's shoulder and torso volume corrections. The browser now evaluates all 2,184 nonzero native LOD1 corrective components on the final blended pose.
-
-## Verification and limits
-
-Tests cover constant phase rate across wraps, matching cycle endpoint keys, preservation of hip motion, travel/heading alignment, upper-body replacement, crowd steering, source-bound preparation, frame/unit/root conventions, interruption, and the production API/asset trust boundaries. MHR tests check actual skinned rest positions and inverse binds, five poses against independently evaluated official dense blendshapes, and 20 real clip poses against source collar-to-shoulder directions. They also verify preserved arm/twist orientations and lower-body positions, and reject a changed native rest rig. Clones keep separate deformation buffers.
-
-Visual review also covers repeated walk/run cycles, signaling while moving, cancellation, keyboard input, the full small crowd, and a phone viewport. This remains a flat-ground integration reference. It does not guarantee contact locking on turns, arbitrary transition poses, navigation, or terrain-aware motion. A curated cycle demonstrates the integration; it does not certify every generated performance.
-
-Measured on the local Chrome review: one corrected character plays at about 60 fps; all nine full-detail MHR characters run at roughly 22–25 fps. Complete native pose deformation costs more CPU time than the former knee-only model. Front/side close views, the new idle/greeting, locomotion, interruptions and a phone viewport were reviewed without browser errors.
+Tests check MCP trust boundaries, preparation, units, root motion, phase clocks, event interruption, and the numerical corrective implementation. The replacement MHR import test compares prepared playback with the independently downloaded embedded-animation baseline, using a half-degree angular tolerance for the measured cross-format differences. It deliberately preserves the known bad source pose, so passing it cannot constitute visual approval.

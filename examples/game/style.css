@@ -657,3 +657,5 @@ dialog p {
     gap:8px
   }
 }
+
+.quality-status { margin: 0 0 16px; padding: 12px 16px; border: 1px solid #8b7855; border-radius: 10px; background: #34352b; color: #f0dfbb; font-size: 13px; line-height: 1.5; }

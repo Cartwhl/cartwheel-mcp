@@ -275,6 +275,5 @@
   ],
   "warnings": [
     "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
-  ],
-  "retargetReference": "swing-mhr-anatomical-shoulders-v1"
+  ]
 }

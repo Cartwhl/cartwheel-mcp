@@ -133,7 +133,9 @@ List pagination uses `nextToken`. Search requires `pageSize` and uses the respon
 
 ## Game animation and motion editing
 
-Version **0.4.0** includes a complete [Three.js Motion Playground](examples/game/README.md): one MHR character with native knee corrections, four generated animation-only clips, idle/walk/run transitions, an interruptible upper-body signal, contact-driven effects and a small crowd. It runs locally without an API key:
+Version **0.4.0** includes a [Three.js Motion Playground integration study](examples/game/README.md): one MHR character with body pose corrections, four generated animation-only clips, idle/walk/run transitions, an interruptible upper-body signal, contact-driven effects and a small crowd. It runs locally without an API key:
+
+**MHR demo quality is unresolved.** Raw retargets show shoulder and hand-contact defects; the rejected shoulder workaround has been removed. The [quality audit](examples/game/AUDIT.md) separates those defects from the MCP and controller checks. These animation assets are not approved production defaults.
 
 ```sh
 npm run example:game
