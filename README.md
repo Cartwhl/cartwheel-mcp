@@ -1,8 +1,8 @@
 # Cartwheel MCP
 
-**Describe a motion. Get an animation. Bring it into Blender.**
+**Describe a motion or capture a video. Bring the animation into Blender.**
 
-Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Generate 3D motion from text, search the motion library, retrieve animation files, and inspect your characters and scenes.
+Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Generate 3D motion from text or capture up to four performers from a video with Comic 4, including facial animation. Retrieve editable animation files, search the motion library, and inspect your characters and scenes.
 
 [![After Hours — generated motion rendered in Blender](docs/media/after-hours.gif)](docs/media/after-hours.mp4)
 
@@ -107,6 +107,9 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 | Tool | What it does |
 | --- | --- |
 | `generate_motion` | Submit text prompts with model and export settings. **Consumes credits.** |
+| `create_media_upload` | Prepare signed upload slots for video references. The client uploads the file bytes. |
+| `get_media` | Retrieve source-video metadata and a fresh download URL. |
+| `generate_motion_from_video` | Capture a video with Comic 4, one to four actors, and optional faces. **Consumes credits.** |
 | `get_batch` | Check an asynchronous batch's status and progress. |
 | `list_batch_motions` | Get a batch's motions, BVH links, and previews. |
 | `get_motion` | Retrieve a motion and optional character/export parameters. |
@@ -118,6 +121,31 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 | `get_scene` | Inspect one scene. |
 
 List pagination uses `nextToken`. Search requires `pageSize` and uses the response's `lastSort` array as `searchAfter`.
+
+## Comic 4: video to editable 3D
+
+[![One video, two performers — Comic 4 capture recast in Blender](docs/media/comic4-camera-reveal.jpg)](docs/media/comic4-camera-reveal.mp4)
+
+[Watch the 10-second camera reveal](docs/media/comic4-camera-reveal.mp4) · [Clean Blender shot](docs/media/comic4-botanical-bureau.mp4) · [How the demo was made](docs/COMIC4.md)
+
+The demo captures two performers together, preserves their timing and placement, and turns them into botanical androids in a conservatory. A moving Blender camera shows a viewpoint absent from the reference. The scene, costumes and camera work are authored; Comic 4 supplies the body, hand and facial performances.
+
+Ask your assistant:
+
+> Use the Comic 4 Blender workflow to capture both people and their faces from this video. Keep their relative placement, import the complete performance into Blender, and render a camera angle that wasn't in the original video.
+
+The **`comic4_blender_scene`** prompt and **`cartwheel://workflows/comic4`** resource provide the full process:
+
+```text
+create_media_upload → client PUTs video bytes → generate_motion_from_video
+  → get_batch → list_batch_motions → import every actor into Blender
+```
+
+Use an authorized video of at most 30 seconds and less than 250 MB. Select `comicModel: "comic4"`, set `numPeople` explicitly for a group, and enable `facialCapture` when needed. The [runnable upload helper and complete request example](examples/comic4/README.md) explain each step. The helper runs through your client's local execution tools; the MCP server has no filesystem access tool.
+
+Capture returns editable performance data, not a finished scene. Preserve actor indices and shared world placement. Retrieve all body and face outputs from `list_batch_motions`, including the source-camera FBX when available. The API's legacy `faceURLs[i].bvhURL` field points to an **MHR FBX**, not a BVH; a custom character needs a compatible rig or facial retargeting. Use `get_motion` with `characterID` and `bodyIndex` to retarget a particular actor's body. See the [Comic 4 workflow](src/workflows/comic4.md) for import checks and camera-reveal guidance.
+
+After updating, reconnect your MCP server to discover the new tools, prompt, and resource.
 
 ## Default Blender workflow in MCP
 
@@ -156,7 +184,7 @@ See [the Blender guide](examples/blender/README.md) for source files, rendering 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes ten explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes thirteen explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.
 - Keys stay in the local environment. They are not bundled in the package or examples.
@@ -170,7 +198,8 @@ Read [SECURITY.md](SECURITY.md) for the trust boundary and reporting details.
 | --- | --- |
 | `CARTWHEEL_API_KEY is required` | Supply the key in the environment of the process your MCP client launches. |
 | HTTP 403 | Check the secret key, production environment, workspace permissions, and API-enabled plan. |
-| Invalid arguments | Read the tool's schema. Generation requires `prompts`, `requestedModel`, and complete `exportSettings`. |
+| Invalid arguments | Read the tool's schema. Text generation requires `prompts` and `requestedModel`; video capture requires `mediaIDs` and `comicModel: "comic4"`. Both require complete `exportSettings`. |
+| Video capture cannot read the reference | Creating a media slot does not upload the video. Complete the signed PUT before submitting capture. |
 | HTTP 429 | Respect `retryAfter` and your plan's batch/concurrency limits. |
 | Generation times out | It may have been accepted. Check recent motions before submitting again. |
 | Server starts but prints nothing | Expected for stdio. Connect an MCP client to communicate with it. |

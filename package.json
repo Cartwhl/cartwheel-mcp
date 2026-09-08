@@ -1,6 +1,6 @@
 {
   "name": "@cartwhl/mcp-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Generate 3D animation with Cartwheel from MCP clients.",
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,10 @@
     "README.md",
     "examples/blender/*.py",
     "examples/blender/README.md",
-    "examples/blender/assets/*.bvh"
+    "examples/blender/assets/*.bvh",
+    "examples/comic4/*.mjs",
+    "examples/comic4/*.py",
+    "examples/comic4/README.md"
   ],
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.mjs",

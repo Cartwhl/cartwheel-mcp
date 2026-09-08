@@ -28,7 +28,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
     return Response.json({ motions: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 10);
+  assert.equal(tools.length, 13);
   assert.equal(tools.find(tool => tool.name === 'generate_motion').annotations.readOnlyHint, false);
   const response = await client.callTool({ name: 'list_motions', arguments: { limit: 10, nextToken: 'a+b/=', sortAscending: false } });
   assert.equal(unpack(response).nextToken, 'next');
@@ -93,6 +93,88 @@ test('network errors report uncertainty without leaking secrets', async t => {
 test('startup requires a key', () => {
   assert.throws(() => createServer({}), /API_KEY/);
 
+});
+
+const capture = {
+  mediaIDs: ['media-1'], comicModel: 'comic4', numPeople: 2, facialCapture: true,
+  exportSettings: { ...generation.exportSettings, exportType: 'fbx-blender', moveInPlace: false },
+};
+
+test('Comic 4 upload preparation, capture, and retrieval preserve every actor and face slot', async t => {
+  const calls = [];
+  const outputs = {
+    motionID: 'motion-1', bvhURL: 'https://assets.example/primary.bvh',
+    bvhURLs: ['https://assets.example/a.bvh', 'https://assets.example/b.bvh'],
+    exportURLs: [null, 'https://assets.example/b.fbx'], exportFilenames: [null, 'b.fbx'],
+    faceURLs: [{ bvhURL: 'https://assets.example/a-face.fbx' }, { bvhURL: 'https://assets.example/b-face.fbx' }],
+    mhrBvhURLs: ['', 'https://assets.example/b-mhr.bvh'],
+    mhrIdentityJsonURLs: ['', 'https://assets.example/b-identity.json'],
+    cameraFbxURL: 'https://assets.example/camera.fbx', sourceVideoMediaID: 'media-1',
+  };
+  const client = await connect(t, async (url, options) => {
+    calls.push({ url, options });
+    if (url.pathname === '/media/upload') return Response.json({ mediaUploads: [{ mediaID: 'media-1', extension: 'mp4', mediaUploadURL: 'https://assets.example/upload' }] });
+    if (url.pathname === '/motion/fromVideo') {
+      assert.deepEqual(JSON.parse(options.body), capture);
+      return Response.json({ batchID: 'batch-comic-1' }, { status: 202 });
+    }
+    if (url.pathname === '/motions/batch-comic-1') return Response.json({ items:[outputs] });
+    if (url.pathname === '/motion/motion-1') return Response.json({ motionID:'motion-1',status:'COMPLETED',bvhURL:outputs.bvhURL });
+    if (url.pathname === '/media/media-1') return Response.json({ mediaID: 'media-1', downloadURL: 'https://assets.example/source.mp4' });
+    assert.fail(`Unexpected route ${url.pathname}`);
+  });
+  const media = { media: [{ name: 'Duet', extension: 'mp4', duration: 8, resolution: '1920x1080' }] };
+  assert.equal(unpack(await client.callTool({ name: 'create_media_upload', arguments: media })).mediaUploads[0].mediaID, 'media-1');
+  assert.deepEqual(JSON.parse(calls[0].options.body), media);
+  assert.equal(unpack(await client.callTool({ name: 'generate_motion_from_video', arguments: capture })).batchID, 'batch-comic-1');
+  assert.deepEqual(unpack(await client.callTool({ name: 'list_batch_motions', arguments: { batchID: 'batch-comic-1',limit:10 } })).items, [outputs]);
+  assert.equal(unpack(await client.callTool({ name: 'get_motion', arguments: { motionID: 'motion-1' } })).bvhURL, outputs.bvhURL);
+  assert.equal(unpack(await client.callTool({ name: 'get_media', arguments: { mediaID: 'media-1' } })).mediaID, 'media-1');
+  assert.equal(calls.filter(c => c.url.pathname === '/motion/fromVideo').length, 1);
+  assert.ok(calls.every(c => c.url.origin === 'https://external-mogen.api.getcartwheel.com'));
+});
+
+test('Comic 4 rejects unsupported models, invalid actor counts, hidden fields and static face overrides', async t => {
+  const client = await connect(t, async () => assert.fail('Invalid requests must not be sent'));
+  const { comicModel, ...missingModel } = capture;
+  for (const arguments_ of [missingModel, { ...capture, comicModel: 'comic3' },
+    { ...capture, mediaIDs: [] }, { ...capture, mediaIDs: ['media-1', 'media-1'] },
+    { ...capture, numPeople: 0 }, { ...capture, numPeople: 5 }, { ...capture, numPeople: 1.5 },
+    { ...capture, createdByUser: 'someone-else' }, { ...capture, subscribers: ['person@example.com'] },
+    { ...capture, callbackURL: 'https://example.com' },
+    { ...capture, exportSettings: { ...capture.exportSettings, faceExpression: 'smile' } },
+    { ...capture, exportSettings: { ...capture.exportSettings, frameStepSize: 0 } },
+  ]) assert.equal((await client.callTool({ name: 'generate_motion_from_video', arguments: arguments_ })).isError, true);
+  for (const media of [[], [{ name: 'x', extension: 'exe' }], [{ name: 'x', extension: 'mp4', duration: 31 }],
+    [{ name: 'x', extension: 'mp4', s3Key: 'other-project' }]]) {
+    assert.equal((await client.callTool({ name: 'create_media_upload', arguments: { media } })).isError, true);
+  }
+  assert.equal((await client.callTool({ name: 'get_media', arguments: { mediaID: '../other' } })).isError, true);
+});
+
+test('ambiguous Comic 4 failures do not resubmit or disclose diagnostics', async t => {
+  let calls = 0;
+  const client = await connect(t, async () => { calls++; throw new Error('test-secret signed-private-url'); });
+  const response = await client.callTool({ name: 'generate_motion_from_video', arguments: capture });
+  assert.equal(response.isError, true);
+  assert.match(unpack(response).guidance, /may have been accepted/);
+  assert.doesNotMatch(JSON.stringify(response), /test-secret|signed-private-url/);
+  assert.equal(calls, 1);
+});
+
+test('per-person retargeting selects the requested actor and requires a target character', async t => {
+  let calls = 0;
+  const client = await connect(t, async url => {
+    calls++;
+    assert.equal(url.searchParams.get('bodyIndex'), '1');
+    assert.equal(url.searchParams.get('characterID'), 'char-second');
+    assert.equal(url.searchParams.get('downloadType'), 'gltf');
+    return Response.json({ gltfURL: 'https://assets.example/second.glb' });
+  });
+  assert.equal((await client.callTool({ name:'get_motion', arguments:{motionID:'motion-1',bodyIndex:1} })).isError, true);
+  assert.equal((await client.callTool({ name:'get_motion', arguments:{motionID:'motion-1',characterID:'char-second',bodyIndex:-1} })).isError, true);
+  assert.equal((await client.callTool({ name:'get_motion', arguments:{motionID:'motion-1',characterID:'char-second',bodyIndex:1,downloadType:'gltf'} })).isError, false);
+  assert.equal(calls,1);
 });
 
 test('real stdio process completes MCP initialization and discovery', async t => {

@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/server.mjs';
-import { workflowUri, workflowPrompt } from '../src/blender-workflow.mjs';
+import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt } from '../src/workflows.mjs';
 
 async function connect(t) {
   const server = createServer({ apiKey: 'workflow-test-key', fetchImpl: async () => assert.fail('Workflow discovery must not call the API') });
@@ -21,14 +21,26 @@ test('Blender workflow is discoverable and packaged files exist', async t => {
   assert.ok(capabilities.prompts);
   assert.ok(capabilities.resources);
   assert.match(client.getInstructions(), /grounded_blender_scene/);
-  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt]);
-  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri]);
+  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt]);
+  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri]);
   const response = await client.readResource({ uri: workflowUri });
   const guide = response.contents[0].text;
   for (const term of ['Gaussian', 'source ankle rotation', 'verify_motion.py', 'render_examples.py', 'Generation consumes credits']) assert.ok(guide.includes(term), term);
   const directory = guide.match(/Installed example directory: (.+)/)[1];
   for (const file of ['motion.py','verify_motion.py','render_examples.py','assets/dance_0.bvh','assets/showcase_1.bvh']) await access(`${directory}/${file}`);
   assert.equal(JSON.stringify(response).includes('workflow-test-key'), false);
+});
+
+test('Comic 4 workflow includes upload, all-actor export, facial and camera guidance', async t => {
+  const client = await connect(t);
+  const { contents } = await client.readResource({ uri: comicWorkflowUri });
+  const guide = contents[0].text;
+  for (const term of ['create_media_upload','generate_motion_from_video','faceURLs','MHR FBX','cameraFbxURL','null','coordinate frame']) assert.ok(guide.includes(term), term);
+  const directory = guide.match(/Installed example directory: (.+)/)[1];
+  await access(`${directory}/upload-video.mjs`);
+  const prompt = await client.getPrompt({ name: comicWorkflowPrompt, arguments: { scene: 'Two actors and a new camera angle' } });
+  assert.match(prompt.messages[0].content.text, /Comic 4/);
+  assert.match(prompt.messages[1].content.text, /Two actors/);
 });
 
 test('Blender prompt supplies the default workflow and requested scene', async t => {

@@ -274,13 +274,14 @@
                         144,
                         240
                       ],
-                      "description": "The frame rate of the motion",
+                      "description": "Export frame rate. Keep the same frame rate for every actor and use the source rate for synchronized comparison.",
                       "example": 24
                     },
                     "frameStepSize": {
                       "type": "number",
                       "description": "The frame step size of the motion generation",
-                      "example": 1
+                      "example": 1,
+                      "minimum": 1
                     },
                     "handPose": {
                       "type": "string",
@@ -597,7 +598,7 @@
     "name": "get_motion",
     "method": "GET",
     "path": "/motion/{motionID}",
-    "description": "Retrieves motion data for a job. Returns the current status and metadata.\nStatus will be QUEUED (waiting), GENERATING (processing), COMPLETED (ready),\nFAILED (error), or FLAGGED (content issue).",
+    "description": "Retrieve primary motion status/downloads or apply one actor’s body to another accessible character. For multi-person Comic retargeting provide characterID and its zero-based bodyIndex. Use list_batch_motions for the complete ordered body, facial, identity and source-camera output arrays.",
     "parameters": [
       {
         "name": "motionID",
@@ -613,6 +614,10 @@
       },
       {
         "name": "fps",
+        "location": "query"
+      },
+      {
+        "name": "bodyIndex",
         "location": "query"
       }
     ],
@@ -660,12 +665,36 @@
           ],
           "description": "Optional output frame rate for BVH output. Defaults to 60.",
           "example": 24
+        },
+        "bodyIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based person index for multi-person Comic body retargeting. Defaults to 0. An index above 0 requires characterID; it selects that actor before retargeting."
         }
       },
       "required": [
         "motionID"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "bodyIndex"
+            ],
+            "properties": {
+              "bodyIndex": {
+                "minimum": 1
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "characterID"
+            ]
+          }
+        }
+      ]
     },
     "annotations": {
       "readOnlyHint": true,
@@ -803,7 +832,7 @@
     "name": "list_batch_motions",
     "method": "GET",
     "path": "/motions/{batchID}",
-    "description": "Retrieves a paginated list of motion generations for a specific batch.\nReturns motion generation records with presigned URLs for BVH files and preview videos.",
+    "description": "Retrieves a paginated list of motion generations for a specific batch.\nReturns motion generation records with presigned URLs for BVH files and preview videos. Comic 4 items include ordered per-person body, face, identity and export arrays plus the captured camera when available. Preserve null slots. get_motion does not replace this complete batch listing.",
     "parameters": [
       {
         "name": "batchID",
@@ -879,6 +908,433 @@
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "create_media_upload",
+    "method": "POST",
+    "path": "/media/upload",
+    "description": "Prepare signed upload URLs for video references. This creates media slots; it does not upload the file bytes. Use the client's authorized file tools to PUT each selected local video to its returned mediaUploadURL without an API key header. Upload before calling generate_motion_from_video. Video references must be at most 30 seconds and smaller than 250 MB. Keep signed URLs private.",
+    "parameters": [],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "media": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "extension": {
+                "type": "string",
+                "enum": [
+                  "mp4",
+                  "mov",
+                  "webm",
+                  "avi",
+                  "mkv"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "duration": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 30
+              },
+              "resolution": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*x[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "extension",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "media"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_media",
+    "method": "GET",
+    "path": "/media/{mediaID}",
+    "description": "Retrieve an accessible reference media item and its current signed download URL. Use sourceVideoMediaID from a motion to retrieve its original reference. Media registration alone does not prove that file bytes have been uploaded.",
+    "parameters": [
+      {
+        "name": "mediaID",
+        "location": "path"
+      }
+    ],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mediaID": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "mediaID"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "generate_motion_from_video",
+    "method": "POST",
+    "path": "/motion/fromVideo",
+    "description": "Capture editable body, hand and optional face performance from uploaded videos using Comic 4. Supports 1–4 people per video. Requires uploaded media IDs and complete export settings. Consumes credits: submit once, then poll get_batch and list_batch_motions. Preserve every actor's ordered exports, MHR face/body assets and camera from list_batch_motions. Use get_motion with characterID and bodyIndex for a particular actor's body retarget. Keep moveInPlace false to preserve interactions and shared world placement.",
+    "parameters": [],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mediaIDs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "comicModel": {
+          "type": "string",
+          "enum": [
+            "comic4"
+          ],
+          "description": "Explicitly select the Comic 4 performance capture pipeline."
+        },
+        "numPeople": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1
+        },
+        "facialCapture": {
+          "type": "boolean",
+          "default": false
+        },
+        "batchName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false
+        },
+        "exportSettings": {
+          "type": "object",
+          "properties": {
+            "exportType": {
+              "type": "string",
+              "enum": [
+                "bvh",
+                "fbx-blender",
+                "fbx-maya",
+                "fbx-unreal",
+                "fbx-roblox",
+                "glb",
+                "ma",
+                "mb",
+                "qpos"
+              ],
+              "description": "The format of the export to generate. `qpos` (MuJoCo joint vector) is available only for MJCF-origin robot characters.",
+              "example": "fbx-blender"
+            },
+            "forward": {
+              "type": "string",
+              "enum": [
+                "Z",
+                "Y",
+                "X",
+                "-Z",
+                "-Y",
+                "-X"
+              ],
+              "description": "The axis to use for the forward orientation of the motion",
+              "example": "Z"
+            },
+            "frameRate": {
+              "type": "number",
+              "enum": [
+                2,
+                12,
+                23.976,
+                24,
+                25,
+                29.97,
+                30,
+                48,
+                50,
+                59.94,
+                60,
+                90,
+                100,
+                120,
+                144,
+                240
+              ],
+              "description": "Export frame rate. Keep the same frame rate for every actor and use the source rate for synchronized comparison.",
+              "example": 24
+            },
+            "frameStepSize": {
+              "type": "number",
+              "description": "The frame step size of the motion generation",
+              "example": 1,
+              "minimum": 1
+            },
+            "ikFeet": {
+              "type": "boolean",
+              "description": "Whether to use inverse kinematics for the feet. Applicable only for MAYA exports.",
+              "example": true
+            },
+            "ikHands": {
+              "type": "boolean",
+              "description": "Whether to use inverse kinematics for the hands. Applicable only for MAYA exports.",
+              "example": false
+            },
+            "includeMesh": {
+              "type": "boolean",
+              "description": "Whether to include the mesh in the motion generation",
+              "example": true
+            },
+            "keyframeCleaning": {
+              "type": "string",
+              "enum": [
+                "none",
+                "reduce",
+                "simplify"
+              ],
+              "description": "The keyframe cleaning method to use for the motion generation",
+              "example": "none"
+            },
+            "moveInPlace": {
+              "type": "boolean",
+              "description": "Whether to move the character in place",
+              "example": false
+            },
+            "rotationOffsets": {
+              "type": "object",
+              "description": "The rotation offsets to use for the motion generation",
+              "properties": {
+                "head": {
+                  "type": "array",
+                  "description": "The rotation offset for the head",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "left_collar": {
+                  "type": "array",
+                  "description": "The rotation offset for the left collar",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "right_collar": {
+                  "type": "array",
+                  "description": "The rotation offset for the right collar",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "left_shoulder": {
+                  "type": "array",
+                  "description": "The rotation offset for the left shoulder",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "right_shoulder": {
+                  "type": "array",
+                  "description": "The rotation offset for the right shoulder",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "left_hip": {
+                  "type": "array",
+                  "description": "The rotation offset for the left hip",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "right_hip": {
+                  "type": "array",
+                  "description": "The rotation offset for the right hip",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "neck": {
+                  "type": "array",
+                  "description": "The rotation offset for the neck",
+                  "items": {
+                    "type": "number"
+                  },
+                  "example": [
+                    0,
+                    0,
+                    0
+                  ]
+                }
+              },
+              "example": {
+                "head": [
+                  0,
+                  0,
+                  0
+                ],
+                "left_ankle": [
+                  0,
+                  0,
+                  0
+                ],
+                "right_ankle": [
+                  0,
+                  0,
+                  0
+                ],
+                "left_collar": [
+                  0,
+                  0,
+                  0
+                ],
+                "right_collar": [
+                  0,
+                  0,
+                  0
+                ],
+                "left_hip": [
+                  0,
+                  0,
+                  0
+                ],
+                "right_hip": [
+                  0,
+                  0,
+                  0
+                ],
+                "left_shoulder": [
+                  0,
+                  0,
+                  0
+                ],
+                "right_shoulder": [
+                  0,
+                  0,
+                  0
+                ],
+                "neck": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            "skinHex": {
+              "type": "string",
+              "description": "The skin hex color to use for the character",
+              "example": "#BF916D"
+            },
+            "up": {
+              "type": "string",
+              "enum": [
+                "Z",
+                "Y",
+                "X",
+                "-Z",
+                "-Y",
+                "-X"
+              ],
+              "description": "The axis to use for the up orientation of the motion",
+              "example": "Y"
+            },
+            "characterID": {
+              "type": "string",
+              "description": "The ID of the character to export the motion on.",
+              "example": "char-upload-Axel"
+            }
+          },
+          "required": [
+            "exportType",
+            "forward",
+            "frameRate",
+            "frameStepSize",
+            "up",
+            "characterID"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "mediaIDs",
+        "comicModel",
+        "exportSettings"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
       "openWorldHint": true
     }
   }
