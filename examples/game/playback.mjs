@@ -1,27 +1,41 @@
-import { AnimationClip, Quaternion, Vector3 } from 'three';
+import { AnimationClip, AnimationMixer, Group, Quaternion, Vector3 } from 'three';
 
 const ease = t => t * t * t * (t * (t * 6 - 15) + 10);
 
 // Separate the reviewed cycle's net travel from the pelvis performance. Setting
 // every X/Z sample to zero also erased hip sway and changed planted-foot motion.
-// This reference uses Y-up motion with a static, identity armature wrapper.
-export function centerRootMotion(clip, rootName, start = 0, end = null, alignHeading = true) {
-  const track = clip.tracks.find(t => t.name === `${rootName}.position`);
-  if (!track) throw Error('Moving root has no position track.');
-  const sample = track.createInterpolant();
-  const origin = new Vector3().fromArray(sample.evaluate(start));
-  const delta = end === null ? new Vector3() : new Vector3().fromArray(sample.evaluate(end)).sub(origin);
+// Measure in Y-up world space: an animated parent can reverse local-axis travel.
+// Bake the centered result back through that parent's transform at each key.
+export function centerRootMotion(clip, sourceRoot, start = 0, end = null, alignHeading = true) {
+  const track = clip.tracks.find(t => t.name === `${sourceRoot.name}.position`);
+  const rotation = clip.tracks.find(t => t.name === `${sourceRoot.name}.quaternion`);
+  if (!track || !rotation) throw Error('Moving root needs position and rotation tracks.');
+  let top = sourceRoot; while (top.parent) top = top.parent;
+  const rig = top.clone(true), container = new Group(); container.add(rig);
+  const root = rig.getObjectByName(sourceRoot.name), mixer = new AnimationMixer(container);
+  // Sampling must remain independent of the track arrays being rewritten.
+  const action = mixer.clipAction(clip.clone()); action.play(); action.paused = true;
+  const seek = time => { action.time = time; mixer.update(0); container.updateMatrixWorld(true); };
+  seek(start);
+  const origin = root.getWorldPosition(new Vector3()), delta = new Vector3();
+  if (end !== null) { seek(end); root.getWorldPosition(delta).sub(origin); }
   delta.y = 0;
   const heading = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), alignHeading ? -Math.atan2(delta.x, delta.z) : 0);
   const p = new Vector3(), q = new Quaternion();
   for (let i = 0; i < track.times.length; i++) {
-    p.fromArray(track.values, i * 3);
+    seek(track.times[i]); root.getWorldPosition(p);
     const progress = end === null ? 0 : (track.times[i] - start) / (end - start);
     p.x -= origin.x + progress * delta.x; p.z -= origin.z + progress * delta.z;
-    p.applyQuaternion(heading).toArray(track.values, i * 3);
+    p.applyQuaternion(heading);
+    root.parent.worldToLocal(p).toArray(track.values, i * 3);
   }
-  const rotation = clip.tracks.find(t => t.name === `${rootName}.quaternion`);
-  for (let i = 0; i < rotation.values.length; i += 4) q.fromArray(rotation.values, i).premultiply(heading).normalize().toArray(rotation.values, i);
+  const parentInverse = new Quaternion();
+  for (let i = 0; i < rotation.times.length; i++) {
+    seek(rotation.times[i]);
+    root.parent.getWorldQuaternion(parentInverse).invert();
+    root.getWorldQuaternion(q).premultiply(heading).premultiply(parentInverse).normalize().toArray(rotation.values, i * 4);
+  }
+  mixer.stopAllAction(); mixer.uncacheRoot(container);
   return delta.length();
 }
 

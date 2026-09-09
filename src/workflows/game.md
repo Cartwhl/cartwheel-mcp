@@ -1,6 +1,6 @@
-# Cartwheel → playable game animation
+# Cartwheel Hermes → playable game animation
 
-Use this workflow for editing a performance and preparing clips for a game. The installed `examples/game` directory includes a local Three.js integration study, a BVH preparation helper, pose sampling, one character, four generated clips, and their metadata. Read its README for commands and the coordinate contract. **The bundled MHR animations failed visual review and are not approved defaults.** Their raw retargets have shoulder/contact defects; the previous consumer shoulder workaround has been removed. Read `examples/game/AUDIT.md` before using those assets.
+Use **Hermes** for the text-to-motion and editing steps in this workflow. The installed `examples/game` directory includes a working Three.js reference, BVH preparation, pose sampling, one MHR character, four Hermes body performances and their metadata. Static hand poses are explicit. Read its README for commands and the coordinate contract, and `examples/game/AUDIT.md` for review evidence and limitations. The separate `hermes_motion` prompt / `cartwheel://workflows/hermes` resource documents every Motion Editor primitive.
 
 ## Inspect the reference and its current limits
 
@@ -8,25 +8,27 @@ Run `node serve.mjs` from the installed example directory (or `npm run example:g
 
 The example demonstrates distance-driven locomotion, reviewed steady gait cycles, a normalized right-arm replacement gesture, interruption, contact-driven footfall effects, an explicitly authored signal event, and independent mixers sharing assets/materials, with MHR full-body pose corrections evaluated after blending. It is a small reference scene, not a claim that arbitrary crowds or characters meet a frame-rate target.
 
-## Generate and keep the source performance
+## Generate and keep the Hermes performance
 
-1. `list_characters`, then `get_character` for one accessible character. Use that same character for the base GLB and all animation-only clips. Inspect its hierarchy and transforms; matching names alone do not prove compatibility.
-2. `generate_motion` with concise creative prompts, `requestedModel: "swing"`, explicit duration, and complete export settings. Use `moveInPlace: false`, Y up, Z forward, and a consistent frame rate so original travel remains measurable. `includeMesh: false` requests animation-only output. Use `loop: true` for cyclic locomotion; inspect the result rather than assuming it loops well.
-3. Submit once, then poll `get_batch` and `list_batch_motions`. Generation and editing consume credits. After an uncertain response, recover the existing job rather than regenerating.
-4. Use `get_motion` with `characterID`, `downloadType: "bvh"`, and the selected `fps` for the native character skeleton. A batch export and a native retarget can differ in units, bone names, position convention, and setup frames. Never treat them as interchangeable. Comic 4 actors also require the correct `bodyIndex`.
+1. `list_characters`, then `get_character` for the intended character. Use the same native character for the base GLB and all animation-only clips. Inspect hierarchy and transforms; matching names alone do not prove compatibility.
+2. Find an accessible seed with `list_motions` / `search_motions`, then `create_scene`, or inspect an existing isolated scene with `get_scene`. Use its actual reference name and timeline index. `set_scene_character` selects the intended character, preserving the slot's timeline. Check the resulting scene before generation.
+3. Call `edit_motion` with a concise prompt, explicit duration and optional seed. Omit `constraints` and `keyPoses` for fresh **Hermes text-only generation**. The source clip provides the skeleton/export template rather than conditioning the body performance. Unmapped channels can survive from that template: choose deliberate hand poses when newly generated finger animation is required but unavailable.
+4. Submit once; poll `get_motion_edit`. Recover uncertain submissions through `list_motion_edits`. Review the completed output on the intended character, then `apply_motion_edit` to the same slot.
+5. `export_scene` exports the applied scene; poll `get_scene_exports`. Preserve travel with `moveInPlace: false`, Y up, Z forward, and consistent cadence. Export a self-contained GLB for visual review and an animation-only BVH for preparation. Scene exports use the object's selected character. Calling `get_motion` on the seed ID still retrieves the seed performance, not its edited scene replacement.
+
+Hermes is not a valid `generate_motion.requestedModel` value. Swing batches and Comic 4 captures remain separate options; do not silently substitute them when the user asks for Hermes. For all current controls and complete request examples, read `cartwheel://workflows/hermes`.
 
 Separate creative direction from gameplay requirements. Author interruption windows, damage, recovery and VFX timing after reviewing the actual clip. Cartwheel does not promise an impact on a particular beat or frame.
 
 ## Edit, loop and stitch through MCP
 
-- `loop_motion` trims/loops an existing completed motion and returns a new `motionID`. Preserve root travel while measuring locomotion speed. `trimMode` selects seconds (`duration`) or source `frames`.
-- `stitch_motions` blends two motion IDs in order, with optional trims. Review the transition, root motion, feet and pose continuity in the output.
-- Loop/stitch are synchronous operations: allow up to four minutes in the MCP client, and cancel explicitly if needed. Neither operation is automatically retried. On an uncertain response, inspect `list_motions` before resubmitting.
-- `create_scene` creates an editable scene from accessible motion IDs. `get_scene` returns its object reference names and timeline. Read these instead of inventing a reference name or timeline index.
-- `edit_motion` accepts a creative prompt, timed `root2d` waypoints and/or `fullbody` constraints. These target the exact scene source BVH, not the separately exported game rig. Inspect source frame count, frame rate, coordinate system and joint order first.
-- `edit_key_poses` regenerates around compatible native pose snapshots and derives duration from the source. Use `sample-poses.mjs` on the exact, untrimmed Y-up scene BVH to construct snapshots. Its `localJointRot` includes End Sites in Three BVHLoader order; rotations are axis-angle radians, and positions retain the native source units. Do not copy Euler rotations into this field.
-- `keyPoses` overrides inline constraints upstream, so the MCP rejects requests containing both. To combine path and poses, put `root2d` and `fullbody` entries together in `constraints`; inline positions use meters. MHR pose conversion has a separate source rig contract: use valid native MHR snapshots with `edit_key_poses`, not an arbitrary game skeleton.
-- Each edit returns a `jobID`. Poll `get_motion_edit` until `COMPLETED` or a terminal failure. `list_motion_edits` recovers history for that slot. Inspect the returned output BVH before `apply_motion_edit`; applying replaces that scene slot’s performance. The server checks job membership and completion. History lookup is limited to the service’s accessible recent jobs; a missing old job is not permission to apply it to another slot.
+- `edit_motion` supports Hermes text-only generation, `root2d` paths/facing, `fullbody` stamps, hand/foot controls, selected end effectors, and built-in curved repathing with handles, holds and optional pose stamps. Constraints refer to the exact scene BVH cadence.
+- `edit_key_poses` regenerates around compatible native snapshots and derives duration from the source. Use `sample-poses.mjs` on the exact untrimmed Y-up scene BVH. Its `localJointRot` includes End Sites in Three BVHLoader order; rotations are axis-angle radians and positions retain native source units. MHR has a dedicated native pose conversion path. Inline end-effector controls require correctly converted Hermes SOMA-30 or SOMA-77 poses; MHR/Axel snapshots cannot be passed directly.
+- For ordinary edits, combine `root2d` and `fullbody` inside `constraints`; do not also supply native `keyPoses`, which take precedence upstream. One built-in `twoPassRepath` envelope can accompany native key poses, or contain inline pose/effector stamps. The Hermes guide documents that exception and all curve fields.
+- `save_key_poses` persists editor state without generation; an empty list clears it. Inspect `get_scene` to read it back.
+- Poll edits and review output before applying. Applying replaces that slot's performance. The MCP verifies job membership and completion; a completed historical job can restore a prior edit. Missing old history does not permit applying a job to another slot.
+- `loop_motion` trims/loops an existing completed motion ID; `stitch_motions` blends two motion IDs in order. They return new motion IDs and do not automatically consume edited scene output. `trimMode` selects seconds (`duration`) or source `frames`.
+- Loop/stitch are synchronous operations: allow up to four minutes in the MCP client. They are not automatically retried. After an uncertain response, inspect `list_motions` before resubmitting.
 
 Example waypoint edit **for a reviewed 96-frame, Y-up, meters-scale source at 24 fps**:
 
@@ -36,7 +38,7 @@ Example waypoint edit **for a reviewed 96-frame, Y-up, meters-scale source at 24
   "referenceName": "REPLACE_REFERENCE_NAME",
   "timelineIndex": 0,
   "duration": 4,
-  "prompt": "A person walks forward, following the path",
+  "prompt": "A person doing a relaxed walk along the path.",
   "constraints": [{
     "type": "root2d",
     "frame_indices": [0, 48, 95],
@@ -69,9 +71,9 @@ Contacts use joint world height/speed with hysteresis and a minimum duration. Th
 
 Loop diagnostics measure first/last joint angles, root translation wrap, and velocity mismatch. A traveling root can intentionally have a large wrap. Small endpoint errors do not certify a smooth loop; inspect the wrap in motion. `frameSequenceDurationSeconds` is frame count/fps for frame-sequence exports; `sampleSpanSeconds` is `(frameCount - 1)/fps`, the actual key span. Do not invent a loop period or extend a clip with a held frame from either number.
 
-The reference asserts skeleton identity and native offsets, applies the character parent’s root coordinate transform, retains a single character asset, and checks each BVH against its metadata hash. Locomotion follows actual traveled distance after movement limits, never intended speed alone. Walk/run use one reviewed steady cycle each, with a selected shared foot phase and constant source-time rate. Supply `reviewedCycle` to the local preparation helper to record its start/end boundary samples, phase marker and short seam-blend window. The helper measures net cycle travel and ties this choice to the source hash. Keep traveling samples: playback subtracts net travel while retaining hip sway. Do not drive phase directly from every inferred contact; split/missed contacts can introduce severe speed changes. Stride averages exclude non-alternating candidates, which remain visible with warnings.
+The reference asserts skeleton identity and native offsets, retains a single character asset, and checks each BVH against its metadata hash. Root travel and heading are measured in world space using the animated parent hierarchy, then baked back into parent-local coordinates. Never infer world forward from a pelvis-local displacement or a bind-pose parent matrix. Verify anatomical facing against actual gameplay displacement for every locomotion clip. Locomotion follows actual traveled distance after movement limits, never intended speed alone. Walk/run use one reviewed steady cycle each, with a selected shared foot phase and constant source-time rate. Supply `reviewedCycle` to the local preparation helper to record its start/end boundary samples, phase marker and short seam-blend window. The helper measures net cycle travel and ties this choice to the source hash. Keep traveling samples: playback subtracts net travel while retaining hip sway. Do not drive phase directly from every inferred contact; split/missed contacts can introduce severe speed changes. Stride averages exclude non-alternating candidates, which remain visible with warnings.
 
-First play a self-contained animated export returned by `get_motion` (`downloadType: "gltf"` for a GLB/GLTF character, or `"fbx"` for an FBX character), using its own rig and animation. Compare it with the same performance on the source character before adding BVH preparation, cycles, layers, smoothing or pose corrections. Preserve original files and hashes privately. If the untouched export is already malformed, investigate the retargeted pose and character compatibility; do not declare a browser-side offset a general repair.
+First play a self-contained animated scene export from `export_scene` / `get_scene_exports`, using its own rig and animation. For an unedited motion-library asset, use `get_motion` with the appropriate character and download format instead. Compare it with the same performance on the source character before adding BVH preparation, cycles, layers, smoothing or pose corrections. Preserve original files and hashes privately. If the untouched export is already malformed, investigate the retargeted pose and character compatibility; do not declare a browser-side offset a general repair.
 
 Inspect actual skin deformation in the native bind pose, arms down and arms raised from front and side. Check wrists, finger bends, hand/body intersections and intended contacts. Matching BVH offsets or inverse binds does not establish a suitable animated pose. Different characters' internal collarbone directions are not interchangeable targets. Retargeted rotations can lose hand contact when proportions differ. Review the complete performance at source cadence before selecting it for gameplay.
 

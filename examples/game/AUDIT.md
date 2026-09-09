@@ -1,40 +1,60 @@
-# Motion quality audit
+# Hermes game quality audit
 
-The first game reference used Mani and four generated Swing clips. Review exposed real integration defects, as well as an uneven transition in the generated run loop. A small first/last pose difference had not established that the whole performance was suitable for gameplay.
+The game now uses **Hermes for all four body performances**: idle, walk, run and signal. The MHR character, native skin weights and full-body pose corrective model are unchanged. The previous consumer shoulder adjustment and experimental shoulder-direction retarget patch are not enabled.
 
-| Finding in the first reference | Correction |
+## What changed
+
+The earlier Swing/MHR set showed collapsed shoulders and poor hand contact even in untouched animated exports. Importing those exports faithfully did not make their poses suitable for this character. Changing prompt wording did not establish a reliable repair. A geometric patch that forced source and target collarbone directions to agree also produced raised shoulders on other poses and was rejected.
+
+The Hermes text-only comparison produced more suitable body poses using the existing retargeter. The current game retains that idle and walk, adds a pose-guided run and a newly generated signal, and uses explicit static hand poses. Hermes generates the body through its source/export skeleton before MHR retargeting; this is not a native MHR-output model. This set does not establish a general fix for every Swing retarget or every Hermes prompt.
+
+Unmapped finger channels can survive from the editor's source clip. To avoid inheriting that old finger animation, this set replaces them with official static hand poses before retargeting: relaxed hands for idle/walk, loose fists for run, relaxed left and open right for signal. Body and wrist tracks remain Hermes motion. See [ASSETS.md](ASSETS.md) and the per-clip metadata for provenance.
+
+## Playback selection and review
+
+| Clip | Selection and review |
 | --- | --- |
-| A split running contact at frames 118–125 was treated as a complete stride. Constant ground speed produced approximately 1.13× → 0.34× → 1.33× source playback speed. | Contact estimates no longer drive the clock. Walk/run each use an explicitly reviewed steady cycle, its measured net travel, and a constant phase rate. |
-| The crowd chased points moving around small ellipses. A 60-second controller replay measured heading changes up to about 1,717°/s. | Continuous steering around a larger orbit; regression checks sustained speed and bounded heading changes. |
-| Centering zeroed every horizontal pelvis sample, removing hip sway along with travel. | Remove the cycle’s net travel and heading while retaining the residual pelvis performance. Remove idle drift without changing its facing. |
-| A full waving performance was added to the existing walking arm swing. | Complementary gesture replacement weights. The base body keeps moving; interruption fades the held gesture pose. |
-| Playback duration was extended beyond the final key, holding the last pose for an extra frame. | Use actual key times and an explicit cycle boundary. Reviewed cycle endpoints match through a short symmetric blend. |
-| Stride averages included non-alternating contact candidates. | Preserve those candidates with warnings, and exclude them from alternating-stride averages. |
-| Keyboard movement was suppressed after interacting with the crowd slider. | Text editing retains focus protection; movement keys work after range/checkbox controls. Range arrow keys retain their normal behavior. |
+| Idle | The complete five-second Hermes take, with gameplay centering. Arms hang beside the body. Review the repeated wrap; this is a short idle, not a full behavior system. |
+| Walk | One steady interior stride, frames 60–93, aligned at phase frame 85. About 1.274 m in 1.10 s. A three-frame boundary blend closes the cycle while preserving hip sway. |
+| Run | Frames 78–103, aligned at phase frame 99. About 2.386 m in 0.833 s, with a three-frame boundary blend. Hermes regenerates the take around 13 authored pose guides. The complete source remains available for inspection. |
+| Signal | The right arm rises to greet, waves and returns. The source frame 55 event was selected for the visible raised hand. Front-facing playback, moving playback and interruption were inspected. The right-arm mask omits the original torso follow-through. |
 
-## Current status: MHR visual review failed
+The local browser review exercised idle/walk/run, repeated gait samples, the complete signal, signal while walking, cancellation, keyboard running, crowd controls and a narrow phone layout. It produced no page errors or horizontal page overflow; all four loaded sidecars identified Hermes. Those checks cover the reference and selected takes, not arbitrary generated replacements or all devices. Review the interactive result before publishing it as a showcase.
 
-The MHR demo is **not visually approved**. The previous shoulder correction was rejected in review and has been removed. The API tools and controller fixes above remain; none of those checks established acceptable character animation.
+## Running arms
 
-### What the controlled comparison established
+The first Hermes run kept the elbows tightly folded and the upper arms pulled behind the torso. This was visible in its source-skeleton playback and untouched MHR export; game preparation reproduced it. Multiple text-only replacements varied in quality and did not reliably remove the cramped posture. This is not evidence of a universal rest-pose or retargeting repair.
 
-1. **The defect exists in an untouched export.** `get_motion` returned self-contained animated MHR GLBs for the same idle and walk IDs. Playing the idle GLB directly, with its embedded rig and animation, reproduces the arms collapsing into the torso. No BVH preparation, game controller, pose correctives, body mask or shoulder adjustment is needed to reproduce it.
-2. **BVH preparation preserves the exported pose closely.** Eight sampled poses across the two independent GLB/BVH downloads agree across 127 joints within 0.363 degrees and 0.000001 meters in local transforms. `test/fixtures/mhr-export-baseline.json` records the export hashes and observations. This bounds import fidelity at those samples; it is not a quality score or a complete temporal audit.
-3. **The shoulder adjustment was not a valid general retarget repair.** It forced MHR's collar-to-shoulder direction to match the source character and compensated the arm rotation. That moved the arms outward but created raised, bulky shoulders. Different rigs' internal joint directions are not interchangeable anatomical targets. The test asserting that forced direction reproduced the adjustment's assumption, not a visually correct MHR pose. The adjustment, calibration, metadata opt-in and that test were removed.
-4. **Hand contact did not survive the character change.** In the selected idle, the hands meet on the source Mani export but separate on MHR. Sampled palm orientation also differs by roughly 8–12 degrees. Copying rotations between different proportions does not guarantee clasped-hand contact. This is a poor idle to approve without reviewing the retargeted hands.
-5. **The demo changes the performance further.** A right-arm-only signal mask discards the generated torso and opposite-arm follow-through. The locomotion preview repeats a single short stride. These are controller demonstrations, not evidence that the complete performances remain compelling after layering.
-6. **The deformation pass has a performance cost.** The previous local Chrome run measured approximately 60 fps for one character and 22–25 fps for nine with full pose corrections. Low frame rate can add visible stutter. The fresh post-removal smoke check measured 60 fps for one and 53 fps for nine; the runs are not a controlled performance comparison. Removing or changing pose correctives in isolation did not repair the underlying shoulder/contact defect.
+The replacement uses 13 authored poses derived from a Hermes run, retaining its body/leg performance while placing the hands beside and ahead of the waist. Those poses were submitted through `edit_motion.keyPoses`; Hermes regenerated the performance between them. The published body tracks are the resulting MHR export. No runtime arm rotation offset or hand IK is applied. The guide data is included in [run.hermes-poses.json](assets/run.hermes-poses.json).
 
-The stock MHR rest skeleton and inverse bind matrices agree to approximately 0.0000002 per matrix element. Rebinding the mesh or repainting weights is therefore not justified by the evidence gathered here. The remaining defect involves retargeted pose/body compatibility and contact preservation; the exact hosted-retargeter repair is unresolved. This comparison does **not** establish that Swing generation itself caused the problem, or certify the full MCP implementation as defect-free.
+On the reviewed stride, mean elbow flexion changed from approximately 127–129° to 86–94°, and mean upper-arm angle from vertical changed from approximately 37° to 17–18°. These measurements describe this take; they are not acceptance thresholds for every running style. The source, untouched export, corrected game mesh and gameplay loop were compared from the front and side. Inspect the complete stride and walk/run transitions, including the wrists, rather than approving a single constrained frame.
 
-### Review order before promoting this demo
+## Playback direction correction
 
-- Play the self-contained animated export before preparing animation-only files. Compare it with the same performance on the source character. Preserve both original files and their hashes privately.
-- Review rest, arms down, arms raised, wrists, finger bends and contacts in front/side views. A skin that is correct at rest can still receive an unsuitable retargeted pose.
-- Resolve the MHR retarget and select a performance that survives the change in proportions. Review the complete clip at source cadence before introducing trimming, cycles, speed matching or a body mask.
-- Add each controller feature separately and compare with that baseline. Review gesture follow-through and hands as well as feet. Measure frame rate at the intended crowd size.
-- Obtain visual approval of the resulting animation before treating the bundled MHR assets as recommended defaults.
+The first Hermes game preview moved backward. The generated source traveled forward, but the game computed its heading from pelvis-local displacement under an animated `body_world` bone rotated 180 degrees. That local displacement pointed opposite to world travel. The original import-fidelity test stopped before gameplay centering, so it did not catch this integration defect.
 
-### Automated coverage and its limits
+Travel removal now samples the animated hierarchy in world space, removes net travel and aligns heading there, then bakes the result back through the parent transform at each key. Parent animation and the generated body performance are retained. No motion regeneration or fixed 180-degree character offset is involved. The obsolete bind-pose parent conversion was removed.
 
-Tests check MCP trust boundaries, preparation, units, root motion, phase clocks, event interruption, and the numerical corrective implementation. The replacement MHR import test compares prepared playback with the independently downloaded embedded-animation baseline, using a half-degree angular tolerance for the measured cross-format differences. It deliberately preserves the known bad source pose, so passing it cannot constitute visual approval.
+Regression tests check anatomical facing throughout both bundled gait cycles and centering under a translated, rotating parent. The browser review compares body facing with actual displacement for keyboard directions, walk/run orbits and crowd actors.
+
+## Import and deformation checks
+
+Independent animated GLB exports were sampled before BVH preparation at **28 poses across the four takes, with 127 joints per pose**. The prepared BVH playback differed by at most about **0.0343 degrees** and **0.00000135 meters** in the sampled local transforms. The latter is consistent with float32 precision for the traveling run root. `test/fixtures/mhr-export-baseline.json` records the independent export hashes and sampled poses; the test bounds differences to 0.1 degrees and 0.000005 meters. Agreement bounds import fidelity at those samples, not visual quality or contact accuracy.
+
+Separate tests compare the MHR corrective implementation with official dense reference poses, verify rest skinning, and check that cloned characters own their deformation buffers. Correctives deform the mesh from the final blended pose; they do not rotate the shoulders to compensate for an unsuitable source performance.
+
+The Hermes MCP scene lifecycle was also exercised against an authorized isolated scene: generate and poll, apply a reviewed edit, change the character to MHR, save/clear pose state, request an export and retrieve its completed self-contained GLB. Constraint schemas and request contracts are covered by automated tests. This is not a claim that every constraint combination has received a visual model-output review.
+
+## Controller corrections retained
+
+| Integration defect | Current behavior |
+| --- | --- |
+| Split contacts caused uneven playback speed. | Contact estimates do not drive the clock. Reviewed walk/run cycles use measured net travel and constant phase speed. |
+| Crowd actors chased rapidly moving targets. | Continuous steering around a larger orbit with bounded heading changes. |
+| Root centering removed hip sway. | Subtract net cycle travel and heading while retaining residual pelvis motion. |
+| A wave was added to a complete locomotion arm swing. | Complementary right-arm replacement weights. Interruption cancels future events and fades the held pose. |
+| Loop duration held an extra endpoint frame. | Actual key times and an explicit boundary sample; short symmetric cycle blending. |
+| Split contacts biased stride averages. | Keep and label questionable candidates; average only candidates containing one opposite-foot contact start. |
+| Slider focus suppressed keyboard movement. | Movement works after range/checkbox controls while text editing and range arrow keys retain their normal behavior. |
+
+The scene is flat and has no terrain IK, navigation, collision-aware generation or contact-preserving hand solve. Speed matching reduces integration errors but does not guarantee planted feet during every blend. The crowd shares assets but each character still incurs animation, deformation and rendering work. Frame rate depends on the device and crowd size. Test the intended target rather than treating a local frame-rate reading as a benchmark.

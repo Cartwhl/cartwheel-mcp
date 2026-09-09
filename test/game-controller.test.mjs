@@ -5,7 +5,7 @@ import { MovementController, SignalClock, eventsBetween, gaitProfile, timeAtPhas
 import { samplePoses } from '../examples/game/sample-poses.mjs';
 import { prepareMotion, inspectBVH } from '../src/motion-analysis.mjs';
 import { assumptions, fixture } from './fixtures/bvh.mjs';
-import { AnimationClip, VectorKeyframeTrack, QuaternionKeyframeTrack, Quaternion, Vector3, Bone, AnimationMixer } from 'three';
+import { AnimationClip, VectorKeyframeTrack, QuaternionKeyframeTrack, Quaternion, Vector3, Bone, Group, AnimationMixer } from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { cycleClip, centerRootMotion, splitBodyClip } from '../examples/game/playback.mjs';
 import { prepareFile } from '../examples/game/prepare-game.mjs';
@@ -59,8 +59,8 @@ test('reviewed gait clocks stay constant across every contact and cycle wrap', (
     assert.equal(parsed.skeleton.id, m.skeleton.id);
     assert.ok(parsed.rootMotion.referenceSpeedMetersPerSecond > 1);
     assert.ok(m.rootMotion.referenceSpeedMetersPerSecond > 1);
-    const source = new BVHLoader().parse(text).clip, c = m.playbackCycle;
-    const distance = centerRootMotion(source, 'root', c.startFrame / m.timing.fps, c.endFrame / m.timing.fps);
+    const bvh = new BVHLoader().parse(text), source = bvh.clip, c = m.playbackCycle;
+    const distance = centerRootMotion(source, bvh.skeleton.getBoneByName('root'), c.startFrame / m.timing.fps, c.endFrame / m.timing.fps);
     assert.ok(Math.abs(distance - p.distance) < .0001);
     const clip = cycleClip(source, c, m.timing.fps);
     assert.equal(clip.duration, p.period);
@@ -98,10 +98,53 @@ test('crowd steering does not chase targets or reverse heading while orbiting', 
 test('removing cycle travel preserves hip sway and aligns facing with movement', () => {
   const rotations = Array.from({ length: 5 }, () => new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI / 2).toArray()).flat();
   const clip = new AnimationClip('walk', 4, [new VectorKeyframeTrack('root.position', [0, 1, 2, 3, 4], [0, 1, 0, 1, 1.1, .1, 2, 1, 0, 3, .9, -.1, 4, 1, 0]), new QuaternionKeyframeTrack('root.quaternion', [0, 1, 2, 3, 4], rotations)]);
-  assert.equal(centerRootMotion(clip, 'root', 0, 4), 4);
+  const root = new Bone(); root.name = 'root';
+  assert.equal(centerRootMotion(clip, root, 0, 4), 4);
   const positions = clip.tracks[0].values;
   assert.ok(Math.abs(positions[3] + .1) < 1e-6); assert.ok(Math.abs(positions[4] - 1.1) < 1e-6);
   assert.ok(new Quaternion().fromArray(clip.tracks[1].values).angleTo(new Quaternion()) < 1e-6);
+});
+
+test('bundled Hermes gait facing agrees with forward gameplay travel after centering', () => {
+  for (const name of ['walk', 'run']) {
+    const bvh = new BVHLoader().parse(readFileSync(new URL(`../examples/game/assets/${name}.bvh`, import.meta.url), 'utf8'));
+    const metadata = JSON.parse(readFileSync(new URL(`../examples/game/assets/${name}.motion.json`, import.meta.url)));
+    const { startFrame, endFrame } = metadata.playbackCycle, fps = metadata.timing.fps;
+    centerRootMotion(bvh.clip, bvh.skeleton.getBoneByName('root'), startFrame / fps, endFrame / fps);
+    const group = new Group(); group.add(bvh.skeleton.bones[0]);
+    const mixer = new AnimationMixer(group), action = mixer.clipAction(bvh.clip);
+    action.play(); action.paused = true;
+    for (let frame = startFrame; frame <= endFrame; frame++) {
+      action.time = frame / fps; mixer.update(0); group.updateMatrixWorld(true);
+      const left = group.getObjectByName('l_upleg').getWorldPosition(new Vector3());
+      const right = group.getObjectByName('r_upleg').getWorldPosition(new Vector3());
+      const facing = left.sub(right).cross(new Vector3(0, 1, 0)).normalize();
+      assert.ok(facing.z > .95, `${name}/${frame}: character faces against +Z gameplay travel (${facing.z})`);
+    }
+  }
+});
+
+test('travel centering follows a translated, rotating parent at each animation key', () => {
+  const wrapper = new Bone(); wrapper.name = 'wrapper';
+  const root = new Bone(); root.name = 'root'; wrapper.add(root);
+  const rotations = (name, degrees) => new QuaternionKeyframeTrack(`${name}.quaternion`, [0, 1, 2], degrees.flatMap(d => new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), d * Math.PI / 180).toArray()));
+  // In world space the root moves along +X with a small sideways sway, facing +X.
+  const clip = new AnimationClip('walk', 2, [
+    new VectorKeyframeTrack('wrapper.position', [0, 1, 2], [2, 0, 3, 2, 0, 3, 2, 0, 3]),
+    rotations('wrapper', [180, 90, 0]),
+    new VectorKeyframeTrack('root.position', [0, 1, 2], [2, 1, 3, 2.9, 1.1, -1, 0, 1, -3]),
+    rotations('root', [-90, 0, 90]),
+  ]);
+  const parentTracks = clip.tracks.slice(0, 2).map(t => t.values.slice());
+  assert.ok(Math.abs(centerRootMotion(clip, root, 0, 2) - 2) < 1e-6);
+  const group = new Group(); group.add(wrapper);
+  const mixer = new AnimationMixer(group), action = mixer.clipAction(clip); action.play(); action.paused = true;
+  for (const [frame, expected] of [[0, [0, 1, 0]], [1, [-.1, 1.1, 0]], [2, [0, 1, 0]]]) {
+    action.time = frame; mixer.update(0); group.updateMatrixWorld(true);
+    assert.ok(root.getWorldPosition(new Vector3()).distanceTo(new Vector3(...expected)) < 1e-6);
+    assert.ok(new Vector3(0, 0, 1).applyQuaternion(root.getWorldQuaternion(new Quaternion())).z > .99999);
+  }
+  for (let i = 0; i < 2; i++) assert.deepEqual(clip.tracks[i].values, parentTracks[i]);
 });
 
 test('the full-weight gesture replaces upper-body motion while legs keep locomotion', () => {

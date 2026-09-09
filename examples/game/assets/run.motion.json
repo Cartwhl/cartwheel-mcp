@@ -1,16 +1,19 @@
 {
   "schemaVersion": 1,
   "source": {
-    "sha256": "aa95b7dc6c66ecadd3ed1a51f33597b3e82b64f9863c576d9e93879b1e57773e",
+    "sha256": "75a76049e9149a7ac0834ac32d0621a86aa21f246ed5d95658858aae3c7e6de7",
     "frameCount": 150,
     "units": "meters",
     "upAxis": "Y",
     "positionConvention": "absolute_local",
     "provenance": {
-      "motionID": "mogen-job-1788893016-N634-01M215AFSGGQCD6ZER824K1A1T",
+      "jobID": "motion-editor-job-01M23FQJKQB0YXRTNDKS64A0J0",
       "characterID": "char-upload-MHR",
-      "model": "swing",
-      "prompt": "A person jogging straight forward at a steady athletic pace, relaxed arms pumping naturally, continuous even strides, no turns, no pauses."
+      "model": "hermes",
+      "prompt": "A person doing a steady forward run with relaxed shoulders and natural alternating arm swings.",
+      "seed": 202609132,
+      "handPose": "fist_relaxed",
+      "keyPoseCount": 13
     }
   },
   "skeleton": {
@@ -168,18 +171,18 @@
     "rootMotion": "preserve",
     "positionConvention": "offset_relative",
     "droppedAuthoredEvents": 0,
-    "outputSha256": "15fba56f8c3ec9ab8affc8220d06cdf7c97dd39e0fda036214c9553b9dded3ce"
+    "outputSha256": "48855af10cd17edaa2ba0db5d7f28ef7b807adf2d4516d8fb1501445b570ba59"
   },
   "rootMotion": {
     "rootJoint": "root",
     "measuredBeforeInPlaceRemoval": true,
     "displacementMetersYUp": [
-      -0.997504,
-      0,
-      11.402325
+      -0.134929,
+      -0.041059,
+      11.44167
     ],
-    "horizontalPathMeters": 11.452638,
-    "referenceSpeedMetersPerSecond": 2.305923,
+    "horizontalPathMeters": 11.475875,
+    "referenceSpeedMetersPerSecond": 2.310602,
     "measurementSpanSeconds": 4.966617
   },
   "contacts": {
@@ -195,149 +198,138 @@
     },
     "left": [
       {
-        "startFrame": 1,
-        "endFrame": 6,
-        "startSeconds": 0.033333,
-        "endSeconds": 0.199998,
+        "startFrame": 0,
+        "endFrame": 13,
+        "startSeconds": 0,
+        "endSeconds": 0.433329,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.451063,
-        "minimumHeightMeters": 0.056784,
+        "meanSpeedMetersPerSecond": 0.13287,
+        "minimumHeightMeters": 0.064133,
+        "beginsBeforeClip": true,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 23,
+        "endFrame": 34,
+        "startSeconds": 0.766659,
+        "endSeconds": 1.133322,
+        "joint": "l_talocrural",
+        "meanSpeedMetersPerSecond": 0.177794,
+        "minimumHeightMeters": 0.066832,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 24,
-        "endFrame": 29,
-        "startSeconds": 0.799992,
-        "endSeconds": 0.966657,
+        "startFrame": 51,
+        "endFrame": 57,
+        "startSeconds": 1.699983,
+        "endSeconds": 1.899981,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.334772,
-        "minimumHeightMeters": 0.059647,
+        "meanSpeedMetersPerSecond": 0.247845,
+        "minimumHeightMeters": 0.057896,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 48,
-        "endFrame": 54,
-        "startSeconds": 1.599984,
-        "endSeconds": 1.799982,
+        "startFrame": 74,
+        "endFrame": 81,
+        "startSeconds": 2.466642,
+        "endSeconds": 2.699973,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.305562,
-        "minimumHeightMeters": 0.055255,
+        "meanSpeedMetersPerSecond": 0.313826,
+        "minimumHeightMeters": 0.056014,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 72,
-        "endFrame": 77,
-        "startSeconds": 2.399976,
-        "endSeconds": 2.566641,
+        "startFrame": 99,
+        "endFrame": 107,
+        "startSeconds": 3.299967,
+        "endSeconds": 3.566631,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.330494,
-        "minimumHeightMeters": 0.05524,
+        "meanSpeedMetersPerSecond": 0.295572,
+        "minimumHeightMeters": 0.055118,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 95,
-        "endFrame": 99,
-        "startSeconds": 3.166635,
-        "endSeconds": 3.299967,
+        "startFrame": 126,
+        "endFrame": 134,
+        "startSeconds": 4.199958,
+        "endSeconds": 4.466622,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.354577,
-        "minimumHeightMeters": 0.052051,
-        "beginsBeforeClip": false,
-        "continuesAfterClip": false
-      },
-      {
-        "startFrame": 118,
-        "endFrame": 120,
-        "startSeconds": 3.933294,
-        "endSeconds": 3.99996,
-        "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.523967,
-        "minimumHeightMeters": 0.062329,
-        "beginsBeforeClip": false,
-        "continuesAfterClip": false
-      },
-      {
-        "startFrame": 125,
-        "endFrame": 130,
-        "startSeconds": 4.166625,
-        "endSeconds": 4.33329,
-        "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.464701,
-        "minimumHeightMeters": 0.073438,
+        "meanSpeedMetersPerSecond": 0.133874,
+        "minimumHeightMeters": 0.06785,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       }
     ],
     "right": [
       {
-        "startFrame": 12,
-        "endFrame": 17,
-        "startSeconds": 0.399996,
-        "endSeconds": 0.566661,
+        "startFrame": 0,
+        "endFrame": 23,
+        "startSeconds": 0,
+        "endSeconds": 0.766659,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.407379,
-        "minimumHeightMeters": 0.067424,
+        "meanSpeedMetersPerSecond": 0.081652,
+        "minimumHeightMeters": 0.055782,
+        "beginsBeforeClip": true,
+        "continuesAfterClip": false
+      },
+      {
+        "startFrame": 39,
+        "endFrame": 45,
+        "startSeconds": 1.299987,
+        "endSeconds": 1.499985,
+        "joint": "r_talocrural",
+        "meanSpeedMetersPerSecond": 0.243021,
+        "minimumHeightMeters": 0.055714,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 36,
-        "endFrame": 42,
-        "startSeconds": 1.199988,
-        "endSeconds": 1.399986,
+        "startFrame": 62,
+        "endFrame": 69,
+        "startSeconds": 2.066646,
+        "endSeconds": 2.299977,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.356617,
-        "minimumHeightMeters": 0.072033,
+        "meanSpeedMetersPerSecond": 0.336246,
+        "minimumHeightMeters": 0.055424,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 60,
-        "endFrame": 65,
-        "startSeconds": 1.99998,
-        "endSeconds": 2.166645,
+        "startFrame": 87,
+        "endFrame": 93,
+        "startSeconds": 2.899971,
+        "endSeconds": 3.099969,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.247911,
-        "minimumHeightMeters": 0.070663,
+        "meanSpeedMetersPerSecond": 0.187369,
+        "minimumHeightMeters": 0.056008,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 84,
-        "endFrame": 88,
-        "startSeconds": 2.799972,
-        "endSeconds": 2.933304,
+        "startFrame": 112,
+        "endFrame": 119,
+        "startSeconds": 3.733296,
+        "endSeconds": 3.966627,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.375539,
-        "minimumHeightMeters": 0.0699,
+        "meanSpeedMetersPerSecond": 0.241887,
+        "minimumHeightMeters": 0.05437,
         "beginsBeforeClip": false,
         "continuesAfterClip": false
       },
       {
-        "startFrame": 106,
-        "endFrame": 112,
-        "startSeconds": 3.533298,
-        "endSeconds": 3.733296,
+        "startFrame": 140,
+        "endFrame": 150,
+        "startSeconds": 4.66662,
+        "endSeconds": 4.99995,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.390562,
-        "minimumHeightMeters": 0.075462,
+        "meanSpeedMetersPerSecond": 0.196003,
+        "minimumHeightMeters": 0.061308,
         "beginsBeforeClip": false,
-        "continuesAfterClip": false
-      },
-      {
-        "startFrame": 143,
-        "endFrame": 145,
-        "startSeconds": 4.766619,
-        "endSeconds": 4.833285,
-        "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.626808,
-        "minimumHeightMeters": 0.098632,
-        "beginsBeforeClip": false,
-        "continuesAfterClip": false
+        "continuesAfterClip": true
       }
     ]
   },
@@ -346,460 +338,320 @@
     "left": {
       "cycles": [
         {
-          "startFrame": 1,
-          "endFrame": 24,
+          "startFrame": 23,
+          "endFrame": 51,
+          "seconds": 0.933324,
+          "distanceMeters": 2.322462,
+          "alternating": true
+        },
+        {
+          "startFrame": 51,
+          "endFrame": 74,
           "seconds": 0.766659,
-          "distanceMeters": 1.765745,
+          "distanceMeters": 2.274352,
           "alternating": true
         },
         {
-          "startFrame": 24,
-          "endFrame": 48,
-          "seconds": 0.799992,
-          "distanceMeters": 1.789227,
+          "startFrame": 74,
+          "endFrame": 99,
+          "seconds": 0.833325,
+          "distanceMeters": 2.421352,
           "alternating": true
         },
         {
-          "startFrame": 48,
-          "endFrame": 72,
-          "seconds": 0.799992,
-          "distanceMeters": 1.751322,
+          "startFrame": 99,
+          "endFrame": 126,
+          "seconds": 0.899991,
+          "distanceMeters": 2.337631,
           "alternating": true
-        },
-        {
-          "startFrame": 72,
-          "endFrame": 95,
-          "seconds": 0.766659,
-          "distanceMeters": 1.816702,
-          "alternating": true
-        },
-        {
-          "startFrame": 95,
-          "endFrame": 118,
-          "seconds": 0.766659,
-          "distanceMeters": 1.799147,
-          "alternating": true
-        },
-        {
-          "startFrame": 118,
-          "endFrame": 125,
-          "seconds": 0.233331,
-          "distanceMeters": 0.528041,
-          "alternating": false,
-          "warning": "Expected one opposite-foot contact start; this may be a split/missed contact or non-alternating motion."
         }
       ],
-      "meanSeconds": 0.7799921999999999,
-      "meanDistanceMeters": 1.7844286,
+      "meanSeconds": 0.85832475,
+      "meanDistanceMeters": 2.33894925,
       "summaryUses": "Only candidate cycles containing exactly one opposite-foot contact start; still requires visual review."
     },
     "right": {
       "cycles": [
         {
-          "startFrame": 12,
-          "endFrame": 36,
-          "seconds": 0.799992,
-          "distanceMeters": 1.841108,
+          "startFrame": 39,
+          "endFrame": 62,
+          "seconds": 0.766659,
+          "distanceMeters": 2.225239,
           "alternating": true
         },
         {
-          "startFrame": 36,
-          "endFrame": 60,
-          "seconds": 0.799992,
-          "distanceMeters": 1.746208,
+          "startFrame": 62,
+          "endFrame": 87,
+          "seconds": 0.833325,
+          "distanceMeters": 2.442192,
           "alternating": true
         },
         {
-          "startFrame": 60,
-          "endFrame": 84,
-          "seconds": 0.799992,
-          "distanceMeters": 1.808172,
+          "startFrame": 87,
+          "endFrame": 112,
+          "seconds": 0.833325,
+          "distanceMeters": 2.318958,
           "alternating": true
         },
         {
-          "startFrame": 84,
-          "endFrame": 106,
-          "seconds": 0.733326,
-          "distanceMeters": 1.815081,
+          "startFrame": 112,
+          "endFrame": 140,
+          "seconds": 0.933324,
+          "distanceMeters": 2.286014,
           "alternating": true
-        },
-        {
-          "startFrame": 106,
-          "endFrame": 143,
-          "seconds": 1.233321,
-          "distanceMeters": 2.770221,
-          "alternating": false,
-          "warning": "Expected one opposite-foot contact start; this may be a split/missed contact or non-alternating motion."
         }
       ],
-      "meanSeconds": 0.7833255,
-      "meanDistanceMeters": 1.8026422500000001,
+      "meanSeconds": 0.84165825,
+      "meanDistanceMeters": 2.31810075,
       "summaryUses": "Only candidate cycles containing exactly one opposite-foot contact start; still requires visual review."
     }
   },
   "flightCandidates": [
     {
-      "startFrame": 7,
-      "endFrame": 10,
-      "startSeconds": 0.233331,
-      "endSeconds": 0.33333,
+      "startFrame": 46,
+      "endFrame": 50,
+      "startSeconds": 1.533318,
+      "endSeconds": 1.66665,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 17,
-      "endFrame": 22,
-      "startSeconds": 0.566661,
-      "endSeconds": 0.733326,
+      "startFrame": 59,
+      "endFrame": 61,
+      "startSeconds": 1.966647,
+      "endSeconds": 2.033313,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 30,
-      "endFrame": 34,
-      "startSeconds": 0.99999,
-      "endSeconds": 1.133322,
+      "startFrame": 71,
+      "endFrame": 73,
+      "startSeconds": 2.366643,
+      "endSeconds": 2.433309,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 42,
-      "endFrame": 46,
-      "startSeconds": 1.399986,
-      "endSeconds": 1.533318,
+      "startFrame": 83,
+      "endFrame": 85,
+      "startSeconds": 2.766639,
+      "endSeconds": 2.833305,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 55,
-      "endFrame": 58,
-      "startSeconds": 1.833315,
-      "endSeconds": 1.933314,
+      "startFrame": 94,
+      "endFrame": 98,
+      "startSeconds": 3.133302,
+      "endSeconds": 3.266634,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 65,
-      "endFrame": 70,
-      "startSeconds": 2.166645,
-      "endSeconds": 2.33331,
+      "startFrame": 120,
+      "endFrame": 124,
+      "startSeconds": 3.99996,
+      "endSeconds": 4.133292,
       "source": "kinematic_heuristic"
     },
     {
-      "startFrame": 78,
-      "endFrame": 81,
-      "startSeconds": 2.599974,
-      "endSeconds": 2.699973,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "startFrame": 88,
-      "endFrame": 92,
-      "startSeconds": 2.933304,
-      "endSeconds": 3.066636,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "startFrame": 101,
-      "endFrame": 104,
-      "startSeconds": 3.366633,
-      "endSeconds": 3.466632,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "startFrame": 112,
-      "endFrame": 116,
-      "startSeconds": 3.733296,
-      "endSeconds": 3.866628,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "startFrame": 130,
-      "endFrame": 143,
-      "startSeconds": 4.33329,
-      "endSeconds": 4.766619,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "startFrame": 145,
-      "endFrame": 148,
-      "startSeconds": 4.833285,
-      "endSeconds": 4.933284,
+      "startFrame": 135,
+      "endFrame": 138,
+      "startSeconds": 4.499955,
+      "endSeconds": 4.599954,
       "source": "kinematic_heuristic"
     }
   ],
   "loopSeam": {
     "source": "measured_sample_endpoints",
-    "maximumJointAngleDegrees": 0.167552,
+    "maximumJointAngleDegrees": 30.513997,
     "worstJoints": [
       {
-        "joint": "l_pinky2",
-        "degrees": 0.167552
+        "joint": "l_upleg",
+        "degrees": 30.513997
       },
       {
-        "joint": "l_pinky3",
-        "degrees": 0.115731
+        "joint": "l_lowleg",
+        "degrees": 26.018634
       },
       {
-        "joint": "r_uparm_twist0_proc",
-        "degrees": 0.090279
+        "joint": "r_uparm",
+        "degrees": 23.65004
       },
       {
-        "joint": "l_ring3",
-        "degrees": 0.071091
+        "joint": "l_uparm",
+        "degrees": 21.942222
       },
       {
-        "joint": "r_uparm_twist1_proc",
-        "degrees": 0.059762
+        "joint": "r_lowleg",
+        "degrees": 21.519737
       }
     ],
-    "rootVelocityMismatchMetersPerSecond": 0.75736,
-    "rootTranslationWrapMeters": 11.445874,
+    "rootVelocityMismatchMetersPerSecond": 0.973477,
+    "rootTranslationWrapMeters": 11.442539,
     "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
   },
   "events": [
     {
       "name": "foot_contact",
       "foot": "left",
-      "frame": 1,
-      "seconds": 0.033333,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 7,
-      "seconds": 0.233331,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 10,
-      "seconds": 0.33333,
+      "frame": 23,
+      "seconds": 0.766659,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "right",
-      "frame": 12,
-      "seconds": 0.399996,
+      "frame": 39,
+      "seconds": 1.299987,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
-      "frame": 17,
-      "seconds": 0.566661,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 22,
-      "seconds": 0.733326,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "foot_contact",
-      "foot": "left",
-      "frame": 24,
-      "seconds": 0.799992,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 30,
-      "seconds": 0.99999,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 34,
-      "seconds": 1.133322,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "foot_contact",
-      "foot": "right",
-      "frame": 36,
-      "seconds": 1.199988,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 42,
-      "seconds": 1.399986,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
       "frame": 46,
       "seconds": 1.533318,
       "source": "kinematic_heuristic"
     },
     {
-      "name": "foot_contact",
-      "foot": "left",
-      "frame": 48,
-      "seconds": 1.599984,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 55,
-      "seconds": 1.833315,
-      "source": "kinematic_heuristic"
-    },
-    {
       "name": "flight_end_candidate",
-      "frame": 58,
-      "seconds": 1.933314,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "foot_contact",
-      "foot": "right",
-      "frame": 60,
-      "seconds": 1.99998,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 65,
-      "seconds": 2.166645,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 70,
-      "seconds": 2.33331,
+      "frame": 50,
+      "seconds": 1.66665,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "left",
-      "frame": 72,
-      "seconds": 2.399976,
+      "frame": 51,
+      "seconds": 1.699983,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
-      "frame": 78,
-      "seconds": 2.599974,
+      "frame": 59,
+      "seconds": 1.966647,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_end_candidate",
-      "frame": 81,
-      "seconds": 2.699973,
+      "frame": 61,
+      "seconds": 2.033313,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "right",
-      "frame": 84,
-      "seconds": 2.799972,
+      "frame": 62,
+      "seconds": 2.066646,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
-      "frame": 88,
-      "seconds": 2.933304,
+      "frame": 71,
+      "seconds": 2.366643,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_end_candidate",
-      "frame": 92,
-      "seconds": 3.066636,
+      "frame": 73,
+      "seconds": 2.433309,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "left",
-      "frame": 95,
-      "seconds": 3.166635,
+      "frame": 74,
+      "seconds": 2.466642,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
-      "frame": 101,
-      "seconds": 3.366633,
+      "frame": 83,
+      "seconds": 2.766639,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_end_candidate",
-      "frame": 104,
-      "seconds": 3.466632,
+      "frame": 85,
+      "seconds": 2.833305,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "right",
-      "frame": 106,
-      "seconds": 3.533298,
+      "frame": 87,
+      "seconds": 2.899971,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
+      "frame": 94,
+      "seconds": 3.133302,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 98,
+      "seconds": 3.266634,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "left",
+      "frame": 99,
+      "seconds": 3.299967,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "foot_contact",
+      "foot": "right",
       "frame": 112,
       "seconds": 3.733296,
       "source": "kinematic_heuristic"
     },
     {
+      "name": "flight_start_candidate",
+      "frame": 120,
+      "seconds": 3.99996,
+      "source": "kinematic_heuristic"
+    },
+    {
       "name": "flight_end_candidate",
-      "frame": 116,
-      "seconds": 3.866628,
+      "frame": 124,
+      "seconds": 4.133292,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "left",
-      "frame": 118,
-      "seconds": 3.933294,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "foot_contact",
-      "foot": "left",
-      "frame": 125,
-      "seconds": 4.166625,
+      "frame": 126,
+      "seconds": 4.199958,
       "source": "kinematic_heuristic"
     },
     {
       "name": "flight_start_candidate",
-      "frame": 130,
-      "seconds": 4.33329,
+      "frame": 135,
+      "seconds": 4.499955,
+      "source": "kinematic_heuristic"
+    },
+    {
+      "name": "flight_end_candidate",
+      "frame": 138,
+      "seconds": 4.599954,
       "source": "kinematic_heuristic"
     },
     {
       "name": "foot_contact",
       "foot": "right",
-      "frame": 143,
-      "seconds": 4.766619,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 143,
-      "seconds": 4.766619,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_start_candidate",
-      "frame": 145,
-      "seconds": 4.833285,
-      "source": "kinematic_heuristic"
-    },
-    {
-      "name": "flight_end_candidate",
-      "frame": 148,
-      "seconds": 4.933284,
+      "frame": 140,
+      "seconds": 4.66662,
       "source": "kinematic_heuristic"
     }
   ],
   "warnings": [
-    "Some contact intervals do not form alternating strides. They are excluded from stride averages. Do not drive playback timing directly from inferred contact starts.",
     "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
   ],
   "playbackCycle": {
-    "startFrame": 68,
-    "endFrame": 91,
-    "phaseFrame": 72,
+    "startFrame": 78,
+    "endFrame": 103,
+    "phaseFrame": 99,
     "blendFrames": 3,
-    "sourceSha256": "aa95b7dc6c66ecadd3ed1a51f33597b3e82b64f9863c576d9e93879b1e57773e",
-    "distanceMeters": 1.7903406962712431,
+    "sourceSha256": "75a76049e9149a7ac0834ac32d0621a86aa21f246ed5d95658858aae3c7e6de7",
+    "distanceMeters": 2.385794483127161,
     "selection": "Explicitly reviewed source interval; constant phase rate and a symmetric seam blend. Not inferred from contact intervals."
   }
 }

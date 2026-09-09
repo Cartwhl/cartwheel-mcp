@@ -39,7 +39,7 @@ test('MHR full-body deformation matches official dense model poses and clones ke
 });
 
 // An unmodified embedded animation is independent of the BVH preparation path.
-// It also contains the known retarget defects: matching it is NOT visual approval.
+// Matching exported joint poses does not establish visual quality or contact fidelity.
 test('prepared MHR playback preserves untouched animated-export poses', async () => {
   const asset = name => readFileSync(new URL(`../examples/game/assets/${name}`, import.meta.url));
   const bytes = asset('character.glb');
@@ -49,6 +49,9 @@ test('prepared MHR playback preserves untouched animated-export poses', async ()
     const text = asset(`${motion.name}.bvh`);
     assert.equal(createHash('sha256').update(text).digest('hex'), motion.preparedSha256);
     const metadata = JSON.parse(asset(`${motion.name}.motion.json`));
+    assert.equal(metadata.source.provenance.model, 'hermes');
+    assert.ok(metadata.source.provenance.jobID.startsWith('motion-editor-job-'));
+    assert.ok(metadata.source.provenance.handPose);
     const avatar = clone(model), clip = new BVHLoader().parse(text.toString()).clip;
     const mixer = new AnimationMixer(avatar), action = mixer.clipAction(clip);
     action.setLoop(LoopOnce, 1); action.clampWhenFinished = true; action.play();
@@ -57,10 +60,11 @@ test('prepared MHR playback preserves untouched animated-export poses', async ()
       for (const [name, expected] of Object.entries(pose.joints)) {
         const bone = avatar.getObjectByName(name);
         assert.ok(bone?.isBone, name);
-        assert.ok(bone.position.distanceTo(new Vector3(...expected.position)) < 1e-6, `${motion.name}/${pose.frame}/${name}: position differs from unmodified export`);
-        // Independent GLB/BVH exports differ by up to 0.363 degrees in these
-        // samples. Bound fidelity to half a degree; do not call it equality.
-        assert.ok(bone.quaternion.clone().normalize().angleTo(new Quaternion(...expected.rotation)) < Math.PI / 360, `${motion.name}/${pose.frame}/${name}: rotation differs from unmodified export`);
+        assert.ok(bone.position.distanceTo(new Vector3(...expected.position)) < 5e-6, `${motion.name}/${pose.frame}/${name}: position differs from unmodified export`);
+        // Float32 translation precision depends on the traveling root magnitude.
+        // Bound cross-format differences to 5 micrometers and 0.1 degrees;
+        // this checks fidelity, not visual approval.
+        assert.ok(bone.quaternion.clone().normalize().angleTo(new Quaternion(...expected.rotation)) < Math.PI / 1800, `${motion.name}/${pose.frame}/${name}: rotation differs from unmodified export`);
       }
     }
   }

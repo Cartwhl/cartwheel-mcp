@@ -19,7 +19,12 @@ export const preparationSchema = {
       startFrame: { type: 'integer', minimum: 0 }, endFrame: { type: 'integer', minimum: 1 },
       phaseFrame: { type: 'integer', minimum: 0 }, blendFrames: { type: 'integer', minimum: 1 },
     } },
-    provenance: { type: 'object', additionalProperties: false, properties: { motionID, characterID, bodyIndex, prompt: { type: 'string', maxLength: 4000 }, model: { type: 'string', enum: ['swing', 'scoot', 'comic4'] } } },
+    provenance: { type: 'object', additionalProperties: false, properties: {
+      motionID, characterID, bodyIndex, prompt: { type: 'string', maxLength: 4000 }, model: { type: 'string', enum: ['hermes', 'swing', 'scoot', 'comic4'] },
+      jobID: { type: 'string', minLength: 1, maxLength: 160 }, seed: { type: 'integer', minimum: 0, maximum: 2147483647 },
+      handPose: { type: 'string', maxLength: 160 },
+      keyPoseCount: { type: 'integer', minimum: 0, maximum: 300 },
+    } },
   },
 };
 const validate = new Ajv({ strict: false }).compile(preparationSchema);

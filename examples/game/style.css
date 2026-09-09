@@ -658,4 +658,4 @@ dialog p {
   }
 }
 
-.quality-status { margin: 0 0 16px; padding: 12px 16px; border: 1px solid #8b7855; border-radius: 10px; background: #34352b; color: #f0dfbb; font-size: 13px; line-height: 1.5; }
+.engine-note { margin: 0 0 16px; padding: 12px 16px; border: 1px solid #d2dfd5; border-radius: 10px; background: #e7eee8; color: #365347; font-size: 13px; line-height: 1.5; }

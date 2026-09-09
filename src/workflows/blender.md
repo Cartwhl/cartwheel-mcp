@@ -6,7 +6,7 @@ Use this workflow by default when a user asks to turn Cartwheel motion into a Bl
 
 For a packaged install, copy the bundled `examples/blender` directory into the task's writable workspace before editing or rendering, keeping its scripts and `assets` directory together. A writable repository checkout can use the examples directly.
 
-For a gallery demo, use the bundled motions without making API calls. Choose `after-hours` (two dances and a DJ), `garden` (tai chi), or `moon` (walking along a circular route). Build a preview first:
+For an explicit reproduction of the bundled gallery, use the bundled motions without making API calls. Choose `after-hours` (two dances and a DJ), `garden` (tai chi), or `moon` (walking along a circular route). Build a preview first:
 
 ```sh
 python3 /path/to/cartwheel-mcp/examples/blender/render_examples.py \
@@ -17,6 +17,14 @@ python3 /path/to/cartwheel-mcp/examples/blender/render_examples.py \
 Use the actual Blender executable on the user's machine. The scripts target Blender 5.2. Select a supported Cycles device; use `CPU` when appropriate. The command builds editable scenes and preview images, then verifies grounding and pose continuity. Python 3 and FFmpeg are required for the complete movie workflow.
 
 For a new generated performance, first use `list_characters` to select an accessible character. Submit `generate_motion` once with Swing, an eight-second prompt, and complete BVH export settings. Poll `get_batch`, then retrieve `list_batch_motions` with the returned batch ID and `limit`. Generation consumes credits; polling must not resubmit the generation. Download the returned BVH using the client's authorized local file tools, and keep signed URLs and raw API responses out of published files. Use the file in the scene's `animate_bot` call or replace the matching example asset.
+
+## New stories use new Cartwheel performances
+
+For a new scene or story, generate Cartwheel performances for its main character actions. A request for a different aesthetic is not permission to silently reuse unrelated dance clips, and a narrative request is not satisfied by replacing generated acting with procedural Blender poses. Use Blender for sets, cameras, editing, prop animation, and limited contact corrections around the generated performance.
+
+Break the story into short acting beats, generate each take, and inspect its actual motion before committing to shot timing or prop placement. If a take performs the wrong action, revise the prompt and generate a replacement. Preserve source travel, weight shifts, timing, and independent head motion. Keep hand-contact IK confined to the grasp; it must not replace the full-body performance. Camera cuts can separate takes without inventing a long procedural transition.
+
+Save the exact prompt, model, duration, motion ID, source asset, and shot assignment in a local provenance manifest. Keep credentials, signed asset URLs, and raw service responses out of published material. Explain what Cartwheel generated and what Blender authored when delivering the film. If generation is unavailable, report that limitation before presenting an authored substitute as a Cartwheel demo.
 
 ## Retarget without destroying contact
 
@@ -32,6 +40,10 @@ The default adapter is `examples/blender/motion.py`. Reuse it for these native C
 8. Keep the floor at the actual sole height and place props clear of the restored travel. The DJ's feet stay planted while its upper body performs.
 
 Do not replace this with hard contact switches, shoulder-driven shoe rotation, per-clip foot patches, or an independently timed path. The adapter handles stylized native-rig examples on a flat floor; arbitrary rigs, terrain, and different clip durations require corresponding scene and validation work.
+
+## Finish the characters for the intended aesthetic
+
+Treat the bundled primitive characters as retargeting examples. For a custom film, develop the silhouettes, faces, clothing and materials into finished character models. Use continuous deforming surfaces where visible joint segments would undermine the aesthetic. Fit seams, eyelids and other details to the modeled surface; inspect for floating details, hard deformation creases and coarse paint masks in close-ups. Validate the new skin against the generated joint drivers so a modeling pass does not change the performance. Review both a character portrait and the actual story camera views before rendering the full edit.
 
 ## Check motion before the final render
 

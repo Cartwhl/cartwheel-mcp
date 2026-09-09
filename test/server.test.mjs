@@ -28,7 +28,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
     return Response.json({ motions: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 22);
+  assert.equal(tools.length, 30);
   assert.equal(tools.find(tool => tool.name === 'generate_motion').annotations.readOnlyHint, false);
   const response = await client.callTool({ name: 'list_motions', arguments: { limit: 10, nextToken: 'a+b/=', sortAscending: false } });
   assert.equal(unpack(response).nextToken, 'next');

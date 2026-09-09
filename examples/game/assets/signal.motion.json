@@ -1,16 +1,18 @@
 {
   "schemaVersion": 1,
   "source": {
-    "sha256": "fd241a2a9ca4348bb55dec46c0afc3d8451b8404cb16271b7bf2299f796743e3",
-    "frameCount": 120,
+    "sha256": "9bda7f7b9776dab1132f67643ad7d428454cc14644e71d6bcd4ad64f2eb9bc80",
+    "frameCount": 150,
     "units": "meters",
     "upAxis": "Y",
     "positionConvention": "absolute_local",
     "provenance": {
-      "motionID": "mogen-job-1788904127-3X2R-01M21FXFKCJS479J39MQ7P8R46",
+      "jobID": "motion-editor-job-01M23B7P77EAG32QFT9YDCTKJ4",
       "characterID": "char-upload-MHR",
-      "model": "swing",
-      "prompt": "A person standing comfortably facing forward gives a friendly wave with their right hand and lowers it again. The right elbow stays out to the side and the hand waves near head height. The left elbow is softly bent with the left hand held loosely in front of the left hip, away from the body throughout. Feet stay planted and slightly apart."
+      "model": "hermes",
+      "prompt": "A person doing a friendly right hand wave while standing upright and facing forward. They raise their right hand beside their shoulder, wave hello, and lower the hand to their side. Their left arm rests at their side and their head stays upright.",
+      "seed": 202609111,
+      "handPose": "left relaxed; right open_loose"
     }
   },
   "skeleton": {
@@ -150,9 +152,9 @@
   },
   "timing": {
     "fps": 30.0003,
-    "frameCount": 120,
-    "sampleSpanSeconds": 3.966627,
-    "frameSequenceDurationSeconds": 3.99996,
+    "frameCount": 150,
+    "sampleSpanSeconds": 4.966617,
+    "frameSequenceDurationSeconds": 4.99995,
     "frameIndexing": "zero-based; endFrame exclusive",
     "sourceFrameOffset": 0
   },
@@ -164,23 +166,23 @@
   },
   "preparation": {
     "startFrame": 0,
-    "endFrame": 120,
+    "endFrame": 150,
     "rootMotion": "preserve",
     "positionConvention": "offset_relative",
     "droppedAuthoredEvents": 0,
-    "outputSha256": "9b6ba74b49de30af645b9d1811591e1e41e31ff04ec374412c62163d53c8e768"
+    "outputSha256": "e7983ee49a31f329ee467493d673866ed7356454b79149a0c0bc37a7abf5645d"
   },
   "rootMotion": {
     "rootJoint": "root",
     "measuredBeforeInPlaceRemoval": true,
     "displacementMetersYUp": [
-      -0.040926,
-      -0.00221,
-      -0.02022
+      0.005532,
+      0.000345,
+      0.006288
     ],
-    "horizontalPathMeters": 0.163121,
-    "referenceSpeedMetersPerSecond": 0.041123,
-    "measurementSpanSeconds": 3.966627
+    "horizontalPathMeters": 0.090557,
+    "referenceSpeedMetersPerSecond": 0.018233,
+    "measurementSpanSeconds": 4.966617
   },
   "contacts": {
     "source": "kinematic_heuristic",
@@ -196,12 +198,12 @@
     "left": [
       {
         "startFrame": 0,
-        "endFrame": 120,
+        "endFrame": 150,
         "startSeconds": 0,
-        "endSeconds": 3.99996,
+        "endSeconds": 4.99995,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.03462,
-        "minimumHeightMeters": 0.012312,
+        "meanSpeedMetersPerSecond": 0.005713,
+        "minimumHeightMeters": 0.031535,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -209,12 +211,12 @@
     "right": [
       {
         "startFrame": 0,
-        "endFrame": 120,
+        "endFrame": 150,
         "startSeconds": 0,
-        "endSeconds": 3.99996,
+        "endSeconds": 4.99995,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.036471,
-        "minimumHeightMeters": 0.016923,
+        "meanSpeedMetersPerSecond": 0.006381,
+        "minimumHeightMeters": 0.032308,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -238,38 +240,38 @@
   "flightCandidates": [],
   "loopSeam": {
     "source": "measured_sample_endpoints",
-    "maximumJointAngleDegrees": 62.564642,
+    "maximumJointAngleDegrees": 7.192452,
     "worstJoints": [
       {
-        "joint": "r_lowarm",
-        "degrees": 62.564642
+        "joint": "c_neck",
+        "degrees": 7.192452
       },
       {
-        "joint": "r_uparm",
-        "degrees": 62.18047
+        "joint": "r_wrist_twist",
+        "degrees": 5.951762
       },
       {
-        "joint": "r_clavicle",
-        "degrees": 52.692885
+        "joint": "l_wrist_twist",
+        "degrees": 5.393384
       },
       {
-        "joint": "r_wrist",
-        "degrees": 42.347112
+        "joint": "l_uparm",
+        "degrees": 5.003819
       },
       {
-        "joint": "l_ball",
-        "degrees": 23.728745
+        "joint": "r_lowarm_twist4_proc",
+        "degrees": 4.761409
       }
     ],
-    "rootVelocityMismatchMetersPerSecond": 0.178388,
-    "rootTranslationWrapMeters": 0.045702,
+    "rootVelocityMismatchMetersPerSecond": 0.00593,
+    "rootTranslationWrapMeters": 0.008382,
     "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
   },
   "events": [
     {
       "name": "signal",
-      "frame": 35,
-      "seconds": 1.166655,
+      "frame": 55,
+      "seconds": 1.833315,
       "source": "authored"
     }
   ],

@@ -53,10 +53,21 @@ test('real bundled Cartwheel animation produces finite diagnostics without chang
 });
 
 test('split contacts remain visible but cannot silently bias alternating stride averages', () => {
-  const text = readFileSync(new URL('../examples/game/assets/run.bvh', import.meta.url), 'utf8');
-  const m = prepareMotion(text, { ...assumptions, positionConvention: 'offset_relative', rootJoint: 'root', leftFootJoint: 'l_talocrural', rightFootJoint: 'r_talocrural', contactSpeed: .7 }).metadata;
-  const split = m.strides.left.cycles.find(c => c.startFrame === 118 && c.endFrame === 125);
+  const text = fixture(), source = inspectBVH(text);
+  // Two left contacts without a right step between them, followed by two
+  // complete alternating strides. Keep this regression independent of demo takes.
+  const rows = source.rows.map((row, frame) => {
+    const result = [...row];
+    result[7] = [[10, 18], [25, 33], [55, 63], [85, 90]].some(([a, b]) => frame >= a && frame <= b) ? 0 : .4;
+    result[13] = [[40, 48], [70, 78]].some(([a, b]) => frame >= a && frame <= b) ? 0 : .4;
+    return result;
+  });
+  const bvh = text.slice(0, text.indexOf('Frame Time:')) + `Frame Time: ${source.frameTime}\n${rows.map(row => row.join(' ')).join('\n')}\n`;
+  const m = prepareMotion(bvh, assumptions).metadata;
+  const split = m.strides.left.cycles.find(c => c.startFrame === 11 && c.endFrame === 26);
   assert.equal(split.alternating, false); assert.match(split.warning, /split/);
-  assert.ok(m.strides.left.meanSeconds > .73 && m.strides.left.meanSeconds < .81);
+  assert.equal(m.strides.left.meanSeconds, 1);
+  assert.equal(m.strides.left.meanDistanceMeters, 1);
+  assert.equal(m.strides.left.cycles.filter(c => c.alternating).length, 2);
   assert.ok(m.warnings.some(w => w.includes('Do not drive playback timing')));
 });

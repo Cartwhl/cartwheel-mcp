@@ -1,0 +1,7 @@
+{
+  "name": "Hermes SOMA-30",
+  "rotationFormat": "local axis-angle radians",
+  "coordinateSystem": "Y-up, meters",
+  "note": "Model pose order for advanced hand/foot/end-effector constraints. Scene BVH order and MHR joint frames differ; convert compatible poses before use.",
+  "jointNames": ["Hips", "Spine1", "Spine2", "Chest", "Neck1", "Neck2", "Head", "Jaw", "LeftEye", "RightEye", "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand", "LeftHandThumbEnd", "LeftHandMiddleEnd", "RightShoulder", "RightArm", "RightForeArm", "RightHand", "RightHandThumbEnd", "RightHandMiddleEnd", "LeftLeg", "LeftShin", "LeftFoot", "LeftToeBase", "RightLeg", "RightShin", "RightFoot", "RightToeBase"]
+}

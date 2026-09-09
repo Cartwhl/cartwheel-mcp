@@ -1,16 +1,18 @@
 {
   "schemaVersion": 1,
   "source": {
-    "sha256": "87fd9b01b3345daeea0d7160ba7a68258587eb97f7cd654f720db081039d5a37",
-    "frameCount": 126,
+    "sha256": "90356b8b8a33ade93319e9300c06922b4796b8fbf477aa3fa2f7ad5c56151db7",
+    "frameCount": 150,
     "units": "meters",
     "upAxis": "Y",
     "positionConvention": "absolute_local",
     "provenance": {
-      "motionID": "mogen-job-1788904121-B0M8-01M21FXDFYVTK9VY9WXKB7YSQY",
+      "jobID": "motion-editor-job-01M21YRR5YN284Z8JAJJRNJXKR",
       "characterID": "char-upload-MHR",
-      "model": "swing",
-      "prompt": "A person stands comfortably with feet shoulder width apart, elbows slightly bent and held away from their ribs. Both hands hang loosely in front of the hips, clearly away from the body. Subtle relaxed breathing and a tiny natural head movement, remaining in place and facing forward."
+      "model": "hermes",
+      "prompt": "A person stands at ease, gently shifting their weight between their feet while their relaxed arms hang slightly forward beside their hips.",
+      "seed": 20260908,
+      "handPose": "relaxed"
     }
   },
   "skeleton": {
@@ -150,9 +152,9 @@
   },
   "timing": {
     "fps": 30.0003,
-    "frameCount": 126,
-    "sampleSpanSeconds": 4.166625,
-    "frameSequenceDurationSeconds": 4.199958,
+    "frameCount": 150,
+    "sampleSpanSeconds": 4.966617,
+    "frameSequenceDurationSeconds": 4.99995,
     "frameIndexing": "zero-based; endFrame exclusive",
     "sourceFrameOffset": 0
   },
@@ -164,23 +166,23 @@
   },
   "preparation": {
     "startFrame": 0,
-    "endFrame": 126,
+    "endFrame": 150,
     "rootMotion": "preserve",
     "positionConvention": "offset_relative",
     "droppedAuthoredEvents": 0,
-    "outputSha256": "8e2a73e3027a45f9f41e50101eb0724e8d6eaf58e3ef226de57ab98000e6c80d"
+    "outputSha256": "7ac45a7a4913030713c8c42d03fced3101722f1d4d7888be41f8d093a702a105"
   },
   "rootMotion": {
     "rootJoint": "root",
     "measuredBeforeInPlaceRemoval": true,
     "displacementMetersYUp": [
-      -0.001058,
-      0,
-      -0.01916
+      0.004895,
+      -0.000039,
+      -0.002333
     ],
-    "horizontalPathMeters": 0.049784,
-    "referenceSpeedMetersPerSecond": 0.011948,
-    "measurementSpanSeconds": 4.166625
+    "horizontalPathMeters": 0.044932,
+    "referenceSpeedMetersPerSecond": null,
+    "measurementSpanSeconds": 4.966617
   },
   "contacts": {
     "source": "kinematic_heuristic",
@@ -196,12 +198,12 @@
     "left": [
       {
         "startFrame": 0,
-        "endFrame": 126,
+        "endFrame": 150,
         "startSeconds": 0,
-        "endSeconds": 4.199958,
+        "endSeconds": 4.99995,
         "joint": "l_talocrural",
-        "meanSpeedMetersPerSecond": 0.013344,
-        "minimumHeightMeters": 0.015087,
+        "meanSpeedMetersPerSecond": 0.004026,
+        "minimumHeightMeters": 0.035208,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -209,12 +211,12 @@
     "right": [
       {
         "startFrame": 0,
-        "endFrame": 126,
+        "endFrame": 150,
         "startSeconds": 0,
-        "endSeconds": 4.199958,
+        "endSeconds": 4.99995,
         "joint": "r_talocrural",
-        "meanSpeedMetersPerSecond": 0.014355,
-        "minimumHeightMeters": 0.015434,
+        "meanSpeedMetersPerSecond": 0.003839,
+        "minimumHeightMeters": 0.035758,
         "beginsBeforeClip": true,
         "continuesAfterClip": true
       }
@@ -238,35 +240,36 @@
   "flightCandidates": [],
   "loopSeam": {
     "source": "measured_sample_endpoints",
-    "maximumJointAngleDegrees": 0.242807,
+    "maximumJointAngleDegrees": 6.432811,
     "worstJoints": [
       {
-        "joint": "l_middle2",
-        "degrees": 0.242807
-      },
-      {
-        "joint": "l_wrist_twist",
-        "degrees": 0.222882
-      },
-      {
-        "joint": "l_talocrural",
-        "degrees": 0.215605
+        "joint": "l_uparm",
+        "degrees": 6.432811
       },
       {
         "joint": "r_uparm",
-        "degrees": 0.207799
+        "degrees": 5.585515
       },
       {
-        "joint": "r_ring2",
-        "degrees": 0.195192
+        "joint": "l_wrist",
+        "degrees": 3.49558
+      },
+      {
+        "joint": "c_neck",
+        "degrees": 3.341579
+      },
+      {
+        "joint": "l_clavicle",
+        "degrees": 2.206094
       }
     ],
-    "rootVelocityMismatchMetersPerSecond": 0.033554,
-    "rootTranslationWrapMeters": 0.019189,
+    "rootVelocityMismatchMetersPerSecond": 0.04177,
+    "rootTranslationWrapMeters": 0.005423,
     "note": "Traveling root displacement can be intentional. Endpoint metrics do not certify a seamless loop or contacts across the wrap."
   },
   "events": [],
   "warnings": [
+    "No measurable horizontal travel: reference speed and stride distance are unavailable. In-place clips cannot recover original travel or world-contact speed.",
     "Inferred contacts and flight candidates are not authored impact, damage, recovery or interruption events."
   ]
 }
