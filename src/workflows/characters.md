@@ -87,3 +87,19 @@ The upload helper caps model files at 1 GiB, reference images and thumbnails at 
 Import the actual rigged output and inspect the rest pose, shoulders, elbows, hands, hips and knees with a short motion. Auto-rigging is not a guarantee of facial blendshapes, cloth simulation, or a particular skeleton such as MHR. Use the returned character ID for later animation; do not relabel a custom rig as MHR.
 
 To animate it with **Hermes**, create a scene from an accessible seed motion, call `set_scene_character` with the new character ID, and follow `cartwheel://workflows/hermes` to generate, review, apply and export. For a standalone Swing batch, use the new character ID in `generate_motion.exportSettings.characterID`. Reuse this character instead of generating or uploading it again for each clip.
+
+## Finish generated rigs in Blender
+
+Use the [Lantern Port example](https://github.com/Cartwhl/cartwheel-mcp/tree/main/examples/lantern-port) for three generated characters, Comic 4 acting, Hermes walking and a complete Blender set with camera cuts. The scene assets and rendered film are in the GitHub checkout; they are not bundled into the npm server package.
+
+The Lantern Port builder replaces the current Blender scene; use a fresh file/process for the example.
+
+For these generated rigs, enable **Preserve Volume** on the Armature modifier (`use_deform_preserve_volume = True`). It substantially improved the shoulder collapse observed with linear skinning in this example. Review raised arms, bent elbows and knees after enabling it; it is a skinning choice, not a motion or rest-pose correction. Do not apply this blindly to MHR with its native body correctives, which expects linear skinning.
+
+Inspect the mesh shading separately from the motion. The example's exported custom normals produced dark, broken-looking patches even with the normal-map strength set to zero. Clearing those custom split normals and recomputing smooth mesh normals restored the generated materials. Keep the color textures and rig intact; check the actual asset before applying this repair to another character.
+
+When fitting a GLB to a scene, measure only its skinned meshes. Blender's glTF importer can create a hidden icosphere for bone display; including it in the bounds gives an incorrect character height and floor offset. Apply a constant scene placement and scale, preserve root travel, and check feet throughout the performance. Do not change bone rest transforms to solve a shading or silhouette problem.
+
+Use Gaussian-eased planted-foot IK for the generated-rig example. Its solver measures the actual weighted boots, anchors established contacts, preserves the original knee bend plane and segment lengths, and anticipates pelvis lowering near full leg extension. It uses 80 ms contact easing and a 45 ms ankle-roll smoothing pass. Swing phases remain free. A smooth floor bound keeps soles clear without lifting established plants.
+
+Check skinned sole geometry after IK: a fixed ankle alone does not prevent a soft sole from deforming. These three characters wear rigid work boots, so their sole weights are anchored to the ankle with a soft transition into the original upper-boot weights. Adapt that footwear finishing for different characters; keep MHR's native deformation model intact. Run the example's `verify_contacts.py` and review the movie before final rendering. It checks actual sole drift, floor clearance, ankle rotation, knee acceleration and unchanged leg lengths across the full clip.

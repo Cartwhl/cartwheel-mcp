@@ -8,6 +8,14 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 
 [Watch the Blender demo](docs/media/after-hours.mp4) · [Production setup walkthrough](docs/SETUP.md) · [MCP Blender workflow](#default-blender-workflow-in-mcp) · [More Blender examples](examples/blender/README.md)
 
+## Three generated characters, one Blender scene
+
+[![Lantern Port — three generated characters animated with Comic 4 and Hermes](docs/media/lantern-port.jpg)](docs/media/lantern-port.mp4)
+
+**Lantern Port** takes three text descriptions through character generation and auto-rigging, combines Comic 4 acting with Hermes walking, then renders a miniature skyport with four camera shots and a frog close-up. The example includes the three rigged assets, exact prompts, reproducible Blender scripts, and the reviewed shoulder, face and Gaussian foot-contact fixes.
+
+[Watch Lantern Port](docs/media/lantern-port.mp4) · [Rebuild the scene](examples/lantern-port/README.md) · [Create and auto-rig characters](src/workflows/characters.md)
+
 ## What you need
 
 - **Node.js 22 or newer** and Git.

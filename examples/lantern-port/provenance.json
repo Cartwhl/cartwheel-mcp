@@ -1,0 +1,214 @@
+{
+  "title": "Lantern Port",
+  "date": "2026-09-09",
+  "duration_seconds": 8,
+  "render_fps": 24,
+  "resolution": [
+    1920,
+    1440
+  ],
+  "characters": [
+    {
+      "slug": "captain",
+      "name": "Captain Saffron",
+      "prompt": "A premium stylized animated-film humanoid character for a miniature fantasy skyport diorama: a cheerful middle-aged female airship captain with warm brown skin, a confident kind face, short dark curly hair tucked under a snug burnt-orange knitted beanie. She wears a beautifully tailored mustard-yellow waxed-canvas short work jacket, a teal neckerchief tucked close to the collar, fitted dark navy trousers and sturdy dark brown leather ankle boots. Slightly oversized expressive head, believable compact adult anatomy, sturdy hands with five separate short fingers. Rich tactile materials, sculpted garment seams and restrained weathering, exquisitely crafted collectible quality. Fully clothed, complete full body, two arms and two legs, symmetrical neutral standing pose for rigging, empty hands, arms separated from the torso. No tools, no props, no pedestal, no scenery, no lettering. Cohesive high-end stop-motion puppet aesthetic with soft rounded forms and polished facial sculpting.",
+      "actor_index": 1,
+      "clip_start_seconds": 0,
+      "clip_duration_seconds": 8,
+      "asset": "assets/captain.glb",
+      "sha256": "a91d1b4fae89f7a2e17a8c764729d740b0bd4d522ecc55375d0a825ac5bea401",
+      "animation_model": "Comic 4"
+    },
+    {
+      "slug": "pip",
+      "name": "Pip the Navigator",
+      "prompt": "A charming high-end stop-motion puppet of an adult frog-headed humanoid navigator. A wide smiling rounded sage-green frog head with two expressive amber eyes. Strong ordinary human biped body proportions: broad round shoulders, clearly separate upper arms, elbows and wrists, two straight normal legs, five short separate fingers on each hand. Teal quilted fitted vest over a cream long sleeve shirt, gray fitted trousers, oxblood leather boots, brass goggles on the forehead. Small stocky adult man body with a frog head. Beautiful tactile fabric, stitched seams and subtle clay skin texture. No tail, no crouching frog legs, no webbed limbs. Full body straight-on symmetrical T-pose, both arms fully horizontal to sides, palms forward, legs straight and slightly apart. Empty hands, plain background, no props, no base, no scenery. Exquisite collectible puppet craftsmanship and friendly readable face.",
+      "clip_start_seconds": 0,
+      "clip_duration_seconds": 8,
+      "asset": "assets/pip.glb",
+      "sha256": "b9fad6e6819b3824cee349c7254b0b289a61578cc21d46daf631a8e671e487ce",
+      "animation_model": "Hermes",
+      "motion_prompt": "A person doing four cheerful walking steps forward, coming to a comfortable stop, then looking upward with curiosity and giving a small friendly wave with their right hand. Natural heel-to-toe steps, relaxed shoulders, easy arm swing and a clear settled stop.",
+      "motion_seed": 202609301
+    },
+    {
+      "slug": "brass",
+      "name": "Brass the Dockhand",
+      "prompt": "A premium stylized animated-film humanoid robot dockhand for a miniature fantasy skyport diorama. A lovable sturdy rounded robot with an ivory enamel face, two round inset dark glass eyes with amber pupils, a small subtle smile, and a rounded rectangular head. Body and limbs have humanlike continuous proportions suitable for skeletal animation: two arms with clear rounded shoulder and elbow joints, five separate short chunky fingers on each hand, two legs with knee joints and solid dark work boots. Wears a short terracotta-orange canvas utility vest over a dark teal close-fitting undersuit, fitted dark navy work trousers, a small copper chest badge without letters. Patinated brass edge details and worn ivory enamel, rich tactile materials and sculpted garment seams. Slightly oversized expressive head and substantial hands, exquisite collectible craftsmanship. Fully clothed complete full body, symmetrical neutral standing pose for rigging with arms separated from torso, empty hands. No extra limbs, no backpack, no props, no pedestal, no scenery, no lettering. Cohesive high-end stop-motion puppet aesthetic with soft rounded forms.",
+      "clip_start_seconds": 0,
+      "clip_duration_seconds": 8,
+      "asset": "assets/brass.glb",
+      "sha256": "3559691283d23a3f1d3bd3407119f15a31fe7d4d2eef6318848d88f5de2f5b50",
+      "animation_model": "Hermes",
+      "motion_prompt": "A person doing three slow purposeful walking steps forward, coming to a balanced stop, turning their head to look to the left, then giving a small nod. Natural grounded steps, relaxed shoulders and ordinary arm swing.",
+      "motion_seed": 202609302
+    }
+  ],
+  "body_animation": {
+    "comic4": {
+      "model": "Comic 4",
+      "reference": "two-person-mocap.mp4",
+      "reference_trim_seconds": [
+        1,
+        25
+      ],
+      "reference_duration_seconds": 24,
+      "reference_resolution": [
+        1550,
+        1080
+      ],
+      "reference_fps": 30,
+      "performers": 2,
+      "facial_capture": false,
+      "source_sha256": "55bb5e029f8509bb655b786d92ae0cebc69574dc0e12cac3028aa8c5d631a7e9",
+      "cast_members": [
+        "captain"
+      ]
+    },
+    "hermes": {
+      "model": "Hermes",
+      "cast_members": [
+        "pip",
+        "brass"
+      ],
+      "duration_seconds": 8,
+      "generation": "text-only; no constraints or key poses",
+      "export_hand_pose": "open_loose"
+    },
+    "casting": "Three independent performances. Constant placement, rotation and scale preserve horizontal travel and timing. Gaussian-eased leg IK, ankle-roll smoothing and an anticipated pelvis-height correction stabilize contact in Blender."
+  },
+  "authored_in_blender": [
+    "set and materials",
+    "airship and propeller motion",
+    "four cameras and cuts",
+    "lighting and cloud volumes",
+    "volume-preserving skinning",
+    "mesh normal repair",
+    "localized sailor face surface and material cleanup",
+    "Gaussian-eased planted-foot IK on all three rigs",
+    "rigid boot soles with softly blended weights into the uppers",
+    "short Gaussian smoothing of source ankle roll",
+    "Pip tracking portrait",
+    "flush deck markings and compass inlay"
+  ],
+  "sound": "Original procedural wind, propeller flutter and pentatonic bell phrase; no sampled audio.",
+  "retarget_settings": {
+    "downloadType": "gltf",
+    "fps": 24,
+    "frame_step": 1,
+    "preserve_root_translation": true
+  },
+  "review": {
+    "captain_uv_layout_matches_generated_asset": true,
+    "contact_audit": {
+      "measurements": {
+        "captain/left": {
+          "deep_stance_frames": 192,
+          "max_deep_stance_surface_drift_m": 7.450952921317366e-07,
+          "minimum_boot_height_m": 0.12074948847293854,
+          "max_boot_rotation_degrees_per_frame": 0.05595291023658669,
+          "max_knee_acceleration_m_per_frame_squared": 0.0012641213424084978,
+          "max_segment_length_variation_m": 3.099838100095731e-07
+        },
+        "captain/right": {
+          "deep_stance_frames": 192,
+          "max_deep_stance_surface_drift_m": 1.0699822041715379e-06,
+          "minimum_boot_height_m": 0.12074972689151764,
+          "max_boot_rotation_degrees_per_frame": 0.05595291023658669,
+          "max_knee_acceleration_m_per_frame_squared": 0.00131373355611119,
+          "max_segment_length_variation_m": 3.134076338451308e-07
+        },
+        "pip/left": {
+          "deep_stance_frames": 109,
+          "max_deep_stance_surface_drift_m": 9.071674753613479e-07,
+          "minimum_boot_height_m": 0.12050115317106247,
+          "max_boot_rotation_degrees_per_frame": 14.868902669518185,
+          "max_knee_acceleration_m_per_frame_squared": 0.023237554446685176,
+          "max_segment_length_variation_m": 4.651671840494309e-07
+        },
+        "pip/right": {
+          "deep_stance_frames": 106,
+          "max_deep_stance_surface_drift_m": 9.560287708154647e-07,
+          "minimum_boot_height_m": 0.12050103396177292,
+          "max_boot_rotation_degrees_per_frame": 15.180219157333909,
+          "max_knee_acceleration_m_per_frame_squared": 0.03234592147476694,
+          "max_segment_length_variation_m": 5.148106724250923e-07
+        },
+        "brass/left": {
+          "deep_stance_frames": 120,
+          "max_deep_stance_surface_drift_m": 6.016545626152947e-07,
+          "minimum_boot_height_m": 0.12050190567970276,
+          "max_boot_rotation_degrees_per_frame": 14.97604565166984,
+          "max_knee_acceleration_m_per_frame_squared": 0.024541389208617335,
+          "max_segment_length_variation_m": 4.0197084150150886e-07
+        },
+        "brass/right": {
+          "deep_stance_frames": 130,
+          "max_deep_stance_surface_drift_m": 1.9139147298119497e-06,
+          "minimum_boot_height_m": 0.12050295621156693,
+          "max_boot_rotation_degrees_per_frame": 15.848834723455742,
+          "max_knee_acceleration_m_per_frame_squared": 0.025874195420090593,
+          "max_segment_length_variation_m": 3.128626371307064e-07
+        }
+      },
+      "highest_deck_marking_m": 0.120280422270298,
+      "failures": []
+    },
+    "film_sha256": "54be4737ce8ac952f7179d0f0a958e2ba1283cbdba202fae792af813115250c9",
+    "all_192_png_crcs_valid": true
+  },
+  "render_samples": 256,
+  "shots": [
+    {
+      "name": "Arrival / wide",
+      "frames": [
+        1,
+        52
+      ]
+    },
+    {
+      "name": "Crew / walking",
+      "frames": [
+        53,
+        112
+      ]
+    },
+    {
+      "name": "Pip / close-up",
+      "frames": [
+        113,
+        156
+      ]
+    },
+    {
+      "name": "Lantern Port / hero",
+      "frames": [
+        157,
+        192
+      ]
+    }
+  ],
+  "contact_settings": {
+    "contact_gaussian_sigma_seconds": 0.08,
+    "ankle_orientation_gaussian_sigma_seconds": 0.045,
+    "pelvis_reach_gaussian_sigma_seconds": 0.06,
+    "rigid_sole_height_m": 0.015,
+    "sole_weight_blend_end_height_m": 0.05,
+    "floor_smooth_max_band_m": 0.0005,
+    "floor_clearance_margin_m": 0.0005
+  },
+  "render_quality": {
+    "adaptive_noise_threshold": 0.005,
+    "minimum_samples": 64,
+    "denoiser": "OpenImageDenoise",
+    "denoising_quality": "HIGH",
+    "denoising_guidance": "RGB_ALBEDO_NORMAL",
+    "denoising_prefilter": "ACCURATE",
+    "volume_bounces": 2,
+    "png_bit_depth": 16,
+    "video_encoder": "H.264 / yuv420p / CRF 16",
+    "color_management": "AgX - Medium High Contrast",
+    "exposure": 0.1,
+    "video_color_conversion": "sRGB PNG -> Rec.709 limited-range H.264, Floyd-Steinberg dithering"
+  }
+}

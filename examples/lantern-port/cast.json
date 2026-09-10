@@ -1,0 +1,44 @@
+[
+  {
+    "slug": "captain",
+    "name": "Captain Saffron",
+    "file": "captain.glb",
+    "height": 1.8,
+    "position": [
+      -2.4,
+      0.7,
+      0.121
+    ],
+    "yaw_degrees": 0,
+    "clip_start_seconds": 0,
+    "source_duration_seconds": 24
+  },
+  {
+    "slug": "pip",
+    "name": "Pip the Navigator",
+    "file": "pip.glb",
+    "height": 1.65,
+    "position": [
+      -2.6,
+      -0.55,
+      0.121
+    ],
+    "yaw_degrees": 90,
+    "clip_start_seconds": 0,
+    "source_duration_seconds": 8
+  },
+  {
+    "slug": "brass",
+    "name": "Brass the Dockhand",
+    "file": "brass.glb",
+    "height": 1.86,
+    "position": [
+      2.0,
+      1.8,
+      0.121
+    ],
+    "yaw_degrees": 0,
+    "clip_start_seconds": 0,
+    "source_duration_seconds": 8
+  }
+]

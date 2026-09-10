@@ -9,7 +9,8 @@ from mathutils import Vector, Quaternion
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT))
-from motion import detect_contacts, foot_headings, gaussian, lock_feet, solve_knee
+from contact_math import detect_contacts, foot_headings, gaussian, solve_knee
+from motion import lock_feet
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--scene-root',type=Path,default=ROOT)
 parser.add_argument('--example',choices=('all','after-hours','garden','moon'),default='all')
