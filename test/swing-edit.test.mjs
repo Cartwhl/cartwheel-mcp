@@ -8,14 +8,14 @@ const pose = count => ({ frame_indices: [0, 30], local_joints_rot: [Array.from({
 const keyPose = { frame: 0, localJointRot: [[0, 0, 0]], rootPosition: [0, 1, 0], smoothRoot2d: [0, 0] };
 const curve = () => ({ type: 'twoPassRepath', strategy: 'builtIn', recoveryMode: 'strong', repathCurve: { durationSec: 5, sourceFrameCount: 150, headingMode: 'tangent', points: [{ u: 0, x: 0, z: 0, outHandle: [0, 1] }, { u: 1, x: 1, z: 3, inHandle: [0, 3], holdFrames: 10 }] } });
 async function connect(t, fetchImpl) {
-  const server = createServer({ apiKey: 'secret-hermes-test', fetchImpl });
-  const client = new Client({ name: 'hermes-test', version: '1' });
+  const server = createServer({ apiKey: 'secret-swing-edit-test', fetchImpl });
+  const client = new Client({ name: 'swing-edit-test', version: '1' });
   const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b); await client.connect(a);
   t.after(async () => { await client.close(); await server.close(); });
   return client;
 }
 
-test('Hermes text-only generation preserves the prompt and seed without adding source anchors', async t => {
+test('swing-edit text-only generation preserves the prompt and seed without adding source anchors', async t => {
   let request;
   const client = await connect(t, async (url, options) => { request = { url, options }; return Response.json({ jobID: 'edit-one' }); });
   const result = await client.callTool({ name: 'edit_motion', arguments: { ...slot, prompt: 'A person doing a calm walk.', duration: 6, seed: 42 } });
@@ -24,7 +24,7 @@ test('Hermes text-only generation preserves the prompt and seed without adding s
   assert.deepEqual(JSON.parse(request.options.body), { prompt: 'A person doing a calm walk.', duration: 6, seed: 42 });
 });
 
-test('Hermes mixed primitives and built-in repath retain their distinct wire contracts', async t => {
+test('swing-edit mixed primitives and built-in repath retain their distinct wire contracts', async t => {
   const bodies = [];
   const client = await connect(t, async (_, options) => { bodies.push(JSON.parse(options.body)); return Response.json({ jobID: 'edit-one' }); });
   const root = { type: 'root2d', frame_indices: [0, 30], smooth_root_2d: [[0, 0], [0, 1]], global_root_heading: [[1, 0], [1, 0]] };
@@ -39,7 +39,7 @@ test('Hermes mixed primitives and built-in repath retain their distinct wire con
   assert.equal((await client.callTool({ name: 'edit_motion', arguments: { ...slot, keyPoses: [keyPose], constraints: [curve()] } })).isError, false);
 });
 
-test('malformed, ambiguous and private Hermes controls never reach the API', async t => {
+test('malformed, ambiguous and private swing-edit controls never reach the API', async t => {
   const client = await connect(t, async () => assert.fail('Invalid input reached API'));
   const args = [
     { constraints: [{ type: 'right-hand', ...pose(127) }] },

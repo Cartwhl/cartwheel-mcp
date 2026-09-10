@@ -9,7 +9,7 @@
     "provenance": {
       "jobID": "motion-editor-job-01M21YS0AS635MVEZC3NYD8K56",
       "characterID": "char-upload-MHR",
-      "model": "hermes",
+      "model": "swing-edit",
       "prompt": "A person walks forward at a comfortable pace with relaxed shoulders and a natural alternating arm swing, keeping their elbows softly bent.",
       "seed": 20260909,
       "handPose": "relaxed"

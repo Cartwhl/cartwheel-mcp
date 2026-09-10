@@ -9,7 +9,7 @@
     "provenance": {
       "jobID": "motion-editor-job-01M21YRR5YN284Z8JAJJRNJXKR",
       "characterID": "char-upload-MHR",
-      "model": "hermes",
+      "model": "swing-edit",
       "prompt": "A person stands at ease, gently shifting their weight between their feet while their relaxed arms hang slightly forward beside their hips.",
       "seed": 20260908,
       "handPose": "relaxed"

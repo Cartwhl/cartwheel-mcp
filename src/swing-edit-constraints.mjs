@@ -1,4 +1,4 @@
-// Reviewed Hermes constraint wire formats. No worker URLs or arbitrary JSON payloads.
+// Reviewed swing-edit constraint wire formats. No worker URLs or arbitrary JSON payloads.
 const object = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const number = (minimum, maximum) => ({ type: 'number', minimum, maximum });
 const integer = (minimum, maximum) => ({ type: 'integer', minimum, maximum });
@@ -12,7 +12,7 @@ export const keyPose = object({
   id: { type: 'string', minLength: 1, maxLength: 160 }, frame: integer(0, 7199),
   localJointRot: array(vector(3), 1, 256), rootPosition: vector(3), smoothRoot2d: vector(2), pathProgress: number(0, 1),
 }, ['frame', 'localJointRot', 'rootPosition', 'smoothRoot2d']);
-export const keyPoses = { ...array(keyPose), description: 'Hermes pose snapshots at zero-based frames of the exact scene BVH. localJointRot is axis-angle radians in Three BVHLoader bone order INCLUDING End Sites. Positions use native scene BVH units. pathProgress optionally locates a repath pose by normalized arc length. Use sample-poses.mjs; do not use a separately exported game rig.' };
+export const keyPoses = { ...array(keyPose), description: 'swing-edit pose snapshots at zero-based frames of the exact scene BVH. localJointRot is axis-angle radians in Three BVHLoader bone order INCLUDING End Sites. Positions use native scene BVH units. pathProgress optionally locates a repath pose by normalized arc length. Use sample-poses.mjs; do not use a separately exported game rig.' };
 
 const root2d = object({ type: { const: 'root2d' }, frame_indices: frameIndices, smooth_root_2d: array(vector(2)), global_root_heading: array(vector(2)) }, ['type', 'frame_indices', 'smooth_root_2d']);
 const fullbody = object({ type: { const: 'fullbody' }, ...poseProperties }, ['type', 'frame_indices', 'local_joints_rot', 'root_positions']);
@@ -32,11 +32,11 @@ const repath = object({
 }, ['type', 'strategy', 'recoveryMode', 'repathCurve']);
 export const constraints = {
   ...array({ oneOf: [...primitive.oneOf, repath] }, 1, 32),
-  description: 'Hermes root2d, fullbody, hand/foot or selected end-effector controls; or one builtIn twoPassRepath curve envelope. Inline positions are world meters, rotations axis-angle radians. Fullbody supports scene-source bone order; hand/foot/end-effector rotations REQUIRE Hermes SOMA-30 or SOMA-77 order (no MHR/Axel name remap). Frames use original scene cadence. See cartwheel://workflows/hermes for contracts and curve handles.',
+  description: 'swing-edit root2d, fullbody, hand/foot or selected end-effector controls; or one builtIn twoPassRepath curve envelope. Inline positions are world meters, rotations axis-angle radians. Fullbody supports scene-source bone order; hand/foot/end-effector rotations REQUIRE swing-edit SOMA-30 or SOMA-77 order (no MHR/Axel name remap). Frames use original scene cadence. See cartwheel://workflows/swing-edit for contracts and curve handles.',
 };
 
 const increasing = values => values.every((v, i) => !i || v > values[i - 1]);
-export function validateHermesArguments(args, { allowEmptyPoses = false } = {}) {
+export function validateSwingEditArguments(args, { allowEmptyPoses = false } = {}) {
   if (!allowEmptyPoses && !args.prompt?.trim() && !args.constraints?.length && !args.keyPoses?.length) throw Error('Provide a prompt, constraints or key poses.');
   const curves = (args.constraints || []).filter(c => c.type === 'twoPassRepath');
   if (curves.length && args.constraints.length !== 1) throw Error('twoPassRepath must be the sole constraints envelope; place additional pose/effector constraints in trailingConstraints.');
@@ -62,6 +62,6 @@ function validatePrimitive(c) {
   if (!increasing(c.frame_indices)) throw Error('Constraint frames must be strictly increasing.');
   for (const key of ['smooth_root_2d', 'global_root_heading', 'local_joints_rot', 'root_positions']) if (c[key] && c[key].length !== c.frame_indices.length) throw Error('Constraint arrays must have one entry per frame.');
   if (c.local_joints_rot?.some(rot => rot.length !== c.local_joints_rot[0].length)) throw Error('Pose constraints must use one skeleton.');
-  if (!['fullbody', 'root2d'].includes(c.type) && ![30, 77].includes(c.local_joints_rot[0].length)) throw Error('Hand, foot and end-effector constraints require Hermes SOMA-30 or SOMA-77 joint order; source MHR/Axel snapshots are not remapped for these types.');
+  if (!['fullbody', 'root2d'].includes(c.type) && ![30, 77].includes(c.local_joints_rot[0].length)) throw Error('Hand, foot and end-effector constraints require swing-edit SOMA-30 or SOMA-77 joint order; source MHR/Axel snapshots are not remapped for these types.');
   if (c.global_root_heading?.some(([x, z]) => Math.abs(Math.hypot(x, z) - 1) > .01)) throw Error('Root headings must be unit [cos(yaw), sin(yaw)] pairs.');
 }

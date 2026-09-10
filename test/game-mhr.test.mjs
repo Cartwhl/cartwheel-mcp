@@ -49,7 +49,7 @@ test('prepared MHR playback preserves untouched animated-export poses', async ()
     const text = asset(`${motion.name}.bvh`);
     assert.equal(createHash('sha256').update(text).digest('hex'), motion.preparedSha256);
     const metadata = JSON.parse(asset(`${motion.name}.motion.json`));
-    assert.equal(metadata.source.provenance.model, 'hermes');
+    assert.equal(metadata.source.provenance.model, 'swing-edit');
     assert.ok(metadata.source.provenance.jobID.startsWith('motion-editor-job-'));
     assert.ok(metadata.source.provenance.handPose);
     const avatar = clone(model), clip = new BVHLoader().parse(text.toString()).clip;

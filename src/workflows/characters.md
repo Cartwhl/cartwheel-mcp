@@ -86,11 +86,11 @@ The upload helper caps model files at 1 GiB, reference images and thumbnails at 
 
 Import the actual rigged output and inspect the rest pose, shoulders, elbows, hands, hips and knees with a short motion. Auto-rigging is not a guarantee of facial blendshapes, cloth simulation, or a particular skeleton such as MHR. Use the returned character ID for later animation; do not relabel a custom rig as MHR.
 
-To animate it with **Hermes**, create a scene from an accessible seed motion, call `set_scene_character` with the new character ID, and follow `cartwheel://workflows/hermes` to generate, review, apply and export. For a standalone Swing batch, use the new character ID in `generate_motion.exportSettings.characterID`. Reuse this character instead of generating or uploading it again for each clip.
+To animate it with **swing-edit**, create a scene from an accessible seed motion, call `set_scene_character` with the new character ID, and follow `cartwheel://workflows/swing-edit` to generate, review, apply and export. For a standalone Swing batch, use the new character ID in `generate_motion.exportSettings.characterID`. Reuse this character instead of generating or uploading it again for each clip.
 
 ## Finish generated rigs in Blender
 
-Use the [Lantern Port example](https://github.com/Cartwhl/cartwheel-mcp/tree/main/examples/lantern-port) for three generated characters, Comic 4 acting, Hermes walking and a complete Blender set with camera cuts. The scene assets and rendered film are in the GitHub checkout; they are not bundled into the npm server package.
+Use the [Lantern Port example](https://github.com/Cartwhl/cartwheel-mcp/tree/main/examples/lantern-port) for three generated characters, Comic 4 acting, swing-edit walking and a complete Blender set with camera cuts. The scene assets and rendered film are in the GitHub checkout; they are not bundled into the npm server package.
 
 The Lantern Port builder replaces the current Blender scene; use a fresh file/process for the example.
 

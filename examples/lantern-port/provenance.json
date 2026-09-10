@@ -27,7 +27,7 @@
       "clip_duration_seconds": 8,
       "asset": "assets/pip.glb",
       "sha256": "b9fad6e6819b3824cee349c7254b0b289a61578cc21d46daf631a8e671e487ce",
-      "animation_model": "Hermes",
+      "animation_model": "swing-edit",
       "motion_prompt": "A person doing four cheerful walking steps forward, coming to a comfortable stop, then looking upward with curiosity and giving a small friendly wave with their right hand. Natural heel-to-toe steps, relaxed shoulders, easy arm swing and a clear settled stop.",
       "motion_seed": 202609301
     },
@@ -39,7 +39,7 @@
       "clip_duration_seconds": 8,
       "asset": "assets/brass.glb",
       "sha256": "3559691283d23a3f1d3bd3407119f15a31fe7d4d2eef6318848d88f5de2f5b50",
-      "animation_model": "Hermes",
+      "animation_model": "swing-edit",
       "motion_prompt": "A person doing three slow purposeful walking steps forward, coming to a balanced stop, turning their head to look to the left, then giving a small nod. Natural grounded steps, relaxed shoulders and ordinary arm swing.",
       "motion_seed": 202609302
     }
@@ -65,8 +65,8 @@
         "captain"
       ]
     },
-    "hermes": {
-      "model": "Hermes",
+    "swing-edit": {
+      "model": "swing-edit",
       "cast_members": [
         "pip",
         "brass"

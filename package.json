@@ -1,6 +1,6 @@
 {
   "name": "@cartwhl/mcp-server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Generate 3D animation with Cartwheel from MCP clients.",
   "type": "module",
   "license": "MIT",

@@ -105,7 +105,7 @@ test('removing cycle travel preserves hip sway and aligns facing with movement',
   assert.ok(new Quaternion().fromArray(clip.tracks[1].values).angleTo(new Quaternion()) < 1e-6);
 });
 
-test('bundled Hermes gait facing agrees with forward gameplay travel after centering', () => {
+test('bundled swing-edit gait facing agrees with forward gameplay travel after centering', () => {
   for (const name of ['walk', 'run']) {
     const bvh = new BVHLoader().parse(readFileSync(new URL(`../examples/game/assets/${name}.bvh`, import.meta.url), 'utf8'));
     const metadata = JSON.parse(readFileSync(new URL(`../examples/game/assets/${name}.motion.json`, import.meta.url)));

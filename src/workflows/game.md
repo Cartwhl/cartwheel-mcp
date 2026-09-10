@@ -1,6 +1,6 @@
-# Cartwheel Hermes → playable game animation
+# Cartwheel swing-edit → playable game animation
 
-Use **Hermes** for the text-to-motion and editing steps in this workflow. The installed `examples/game` directory includes a working Three.js reference, BVH preparation, pose sampling, one MHR character, four Hermes body performances and their metadata. Static hand poses are explicit. Read its README for commands and the coordinate contract, and `examples/game/AUDIT.md` for review evidence and limitations. The separate `hermes_motion` prompt / `cartwheel://workflows/hermes` resource documents every Motion Editor primitive.
+Use **swing-edit** for the text-to-motion and editing steps in this workflow. The installed `examples/game` directory includes a working Three.js reference, BVH preparation, pose sampling, one MHR character, four swing-edit body performances and their metadata. Static hand poses are explicit. Read its README for commands and the coordinate contract, and `examples/game/AUDIT.md` for review evidence and limitations. The separate `swing_edit_motion` prompt / `cartwheel://workflows/swing-edit` resource documents every Motion Editor primitive.
 
 ## Inspect the reference and its current limits
 
@@ -8,23 +8,23 @@ Run `node serve.mjs` from the installed example directory (or `npm run example:g
 
 The example demonstrates distance-driven locomotion, reviewed steady gait cycles, a normalized right-arm replacement gesture, interruption, contact-driven footfall effects, an explicitly authored signal event, and independent mixers sharing assets/materials, with MHR full-body pose corrections evaluated after blending. It is a small reference scene, not a claim that arbitrary crowds or characters meet a frame-rate target.
 
-## Generate and keep the Hermes performance
+## Generate and keep the swing-edit performance
 
 1. `list_characters`, then `get_character` for the intended character. Use the same native character for the base GLB and all animation-only clips. Inspect hierarchy and transforms; matching names alone do not prove compatibility.
 2. Find an accessible seed with `list_motions` / `search_motions`, then `create_scene`, or inspect an existing isolated scene with `get_scene`. Use its actual reference name and timeline index. `set_scene_character` selects the intended character, preserving the slot's timeline. Check the resulting scene before generation.
-3. Call `edit_motion` with a concise prompt, explicit duration and optional seed. Omit `constraints` and `keyPoses` for fresh **Hermes text-only generation**. The source clip provides the skeleton/export template rather than conditioning the body performance. Unmapped channels can survive from that template: choose deliberate hand poses when newly generated finger animation is required but unavailable.
+3. Call `edit_motion` with a concise prompt, explicit duration and optional seed. Omit `constraints` and `keyPoses` for fresh **swing-edit text-only generation**. The source clip provides the skeleton/export template rather than conditioning the body performance. Unmapped channels can survive from that template: choose deliberate hand poses when newly generated finger animation is required but unavailable.
 4. Submit once; poll `get_motion_edit`. Recover uncertain submissions through `list_motion_edits`. Review the completed output on the intended character, then `apply_motion_edit` to the same slot.
 5. `export_scene` exports the applied scene; poll `get_scene_exports`. Preserve travel with `moveInPlace: false`, Y up, Z forward, and consistent cadence. Export a self-contained GLB for visual review and an animation-only BVH for preparation. Scene exports use the object's selected character. Calling `get_motion` on the seed ID still retrieves the seed performance, not its edited scene replacement.
 
-Hermes is not a valid `generate_motion.requestedModel` value. Swing batches and Comic 4 captures remain separate options; do not silently substitute them when the user asks for Hermes. For all current controls and complete request examples, read `cartwheel://workflows/hermes`.
+swing-edit is not a valid `generate_motion.requestedModel` value. Swing batches and Comic 4 captures remain separate options; do not silently substitute them when the user asks for swing-edit. For all current controls and complete request examples, read `cartwheel://workflows/swing-edit`.
 
 Separate creative direction from gameplay requirements. Author interruption windows, damage, recovery and VFX timing after reviewing the actual clip. Cartwheel does not promise an impact on a particular beat or frame.
 
 ## Edit, loop and stitch through MCP
 
-- `edit_motion` supports Hermes text-only generation, `root2d` paths/facing, `fullbody` stamps, hand/foot controls, selected end effectors, and built-in curved repathing with handles, holds and optional pose stamps. Constraints refer to the exact scene BVH cadence.
-- `edit_key_poses` regenerates around compatible native snapshots and derives duration from the source. Use `sample-poses.mjs` on the exact untrimmed Y-up scene BVH. Its `localJointRot` includes End Sites in Three BVHLoader order; rotations are axis-angle radians and positions retain native source units. MHR has a dedicated native pose conversion path. Inline end-effector controls require correctly converted Hermes SOMA-30 or SOMA-77 poses; MHR/Axel snapshots cannot be passed directly.
-- For ordinary edits, combine `root2d` and `fullbody` inside `constraints`; do not also supply native `keyPoses`, which take precedence upstream. One built-in `twoPassRepath` envelope can accompany native key poses, or contain inline pose/effector stamps. The Hermes guide documents that exception and all curve fields.
+- `edit_motion` supports swing-edit text-only generation, `root2d` paths/facing, `fullbody` stamps, hand/foot controls, selected end effectors, and built-in curved repathing with handles, holds and optional pose stamps. Constraints refer to the exact scene BVH cadence.
+- `edit_key_poses` regenerates around compatible native snapshots and derives duration from the source. Use `sample-poses.mjs` on the exact untrimmed Y-up scene BVH. Its `localJointRot` includes End Sites in Three BVHLoader order; rotations are axis-angle radians and positions retain native source units. MHR has a dedicated native pose conversion path. Inline end-effector controls require correctly converted swing-edit SOMA-30 or SOMA-77 poses; MHR/Axel snapshots cannot be passed directly.
+- For ordinary edits, combine `root2d` and `fullbody` inside `constraints`; do not also supply native `keyPoses`, which take precedence upstream. One built-in `twoPassRepath` envelope can accompany native key poses, or contain inline pose/effector stamps. The swing-edit guide documents that exception and all curve fields.
 - `save_key_poses` persists editor state without generation; an empty list clears it. Inspect `get_scene` to read it back.
 - Poll edits and review output before applying. Applying replaces that slot's performance. The MCP verifies job membership and completion; a completed historical job can restore a prior edit. Missing old history does not permit applying a job to another slot.
 - `loop_motion` trims/loops an existing completed motion ID; `stitch_motions` blends two motion IDs in order. They return new motion IDs and do not automatically consume edited scene output. `trimMode` selects seconds (`duration`) or source `frames`.

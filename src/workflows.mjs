@@ -12,8 +12,8 @@ export const comicWorkflowUri = 'cartwheel://workflows/comic4';
 export const comicWorkflowPrompt = 'comic4_blender_scene';
 export const gameWorkflowUri = 'cartwheel://workflows/game';
 export const gameWorkflowPrompt = 'game_ready_animation';
-export const hermesWorkflowUri = 'cartwheel://workflows/hermes';
-export const hermesWorkflowPrompt = 'hermes_motion';
+export const swingEditWorkflowUri = 'cartwheel://workflows/swing-edit';
+export const swingEditWorkflowPrompt = 'swing_edit_motion';
 export const characterWorkflowUri = 'cartwheel://workflows/characters';
 export const characterWorkflowPrompt = 'create_rigged_character';
 const workflows = [
@@ -26,13 +26,13 @@ const workflows = [
     description: 'Upload a video, capture up to four actors with faces, preserve their shared placement, and reveal a new camera angle.',
     file: 'comic4.md', directory: 'comic4' },
   { uri: gameWorkflowUri, prompt: gameWorkflowPrompt, name: 'game_animation_workflow',
-    title: 'Cartwheel Hermes → playable game animation',
-    description: 'Generate with Hermes, prepare compatible clips and metadata, and run the complete Three.js game reference.',
+    title: 'Cartwheel swing-edit → playable game animation',
+    description: 'Generate with swing-edit, prepare compatible clips and metadata, and run the complete Three.js game reference.',
     file: 'game.md', directory: 'game' },
-  { uri: hermesWorkflowUri, prompt: hermesWorkflowPrompt, name: 'hermes_motion_workflow',
-    title: 'Hermes → text generation and motion editing',
-    description: 'Generate Hermes body motion from text, use paths, poses, hand/foot controls and curved repathing, then review and export.',
-    file: 'hermes.md', directory: 'game' },
+  { uri: swingEditWorkflowUri, prompt: swingEditWorkflowPrompt, name: 'swing_edit_motion_workflow',
+    title: 'swing-edit → text generation and motion editing',
+    description: 'Generate swing-edit body motion from text, use paths, poses, hand/foot controls and curved repathing, then review and export.',
+    file: 'swing-edit.md', directory: 'game' },
   { uri: characterWorkflowUri, prompt: characterWorkflowPrompt, name: 'character_workflow',
     title: 'Cartwheel → character creation and auto-rigging',
     description: 'Generate a character from text or an image, or upload and auto-rig a model, then retrieve the rigged assets and animate.',

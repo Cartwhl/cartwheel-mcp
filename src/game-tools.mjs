@@ -1,12 +1,12 @@
 // Only documented authenticated API operations and reviewed constraint shapes belong here.
-import { keyPoses, constraints, validateHermesArguments } from "./hermes-constraints.mjs";
+import { keyPoses, constraints, validateSwingEditArguments } from "./swing-edit-constraints.mjs";
 const object = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const string = (description, maxLength = 160) => ({ type: 'string', minLength: 1, maxLength, description });
 const number = (minimum, maximum) => ({ type: 'number', minimum, maximum });
 const integer = (minimum, maximum) => ({ type: 'integer', minimum, maximum });
 const array = (items, minItems = 1, maxItems = 300) => ({ type: 'array', items, minItems, maxItems });
 const editProperties = {
-  prompt: string('Hermes text prompt. With no constraints or keyPoses, generates a fresh performance; otherwise guides constrained regeneration.', 4000), duration: number(1, 10),
+  prompt: string('swing-edit text prompt. With no constraints or keyPoses, generates a fresh performance; otherwise guides constrained regeneration.', 4000), duration: number(1, 10),
   sampler: { enum: ['ddim', 'dpm_solver_v3'] }, seed: integer(0, 2147483647),
   constraints,
   keyPoses,
@@ -41,18 +41,18 @@ export const gameDefinitions = [
     motion1TrimStart: number(0, 100000), motion1TrimEnd: number(0, 100000), motion2TrimStart: number(0, 100000), motion2TrimEnd: number(0, 100000),
     blendSettings: object({ trimMode, ...sampling }),
   }, ['motionIDs'], [], 'Stitch processing may have completed. Check list_motions for its result before resubmitting.'),
-  api('edit_motion', 'POST', targetPath, 'Generate a fresh Hermes motion from text alone, or regenerate with timed root paths, poses and end-effector constraints. Runs model processing. Returns a jobID; poll get_motion_edit, inspect the output, then explicitly apply_motion_edit if wanted. Constraints target the source editor skeleton, not an arbitrary game rig.', {
+  api('edit_motion', 'POST', targetPath, 'Generate a fresh swing-edit motion from text alone, or regenerate with timed root paths, poses and end-effector constraints. Runs model processing. Returns a jobID; poll get_motion_edit, inspect the output, then explicitly apply_motion_edit if wanted. Constraints target the source editor skeleton, not an arbitrary game rig.', {
     ...target, ...editProperties,
   }, Object.keys(target), pathParameters, editGuidance),
-  api('edit_key_poses', 'POST', targetPath.replace('motionEdits', 'keyPoseEdits'), 'Use Hermes to regenerate an existing scene performance around explicit compatible key poses. Consumes credits. Source motion determines duration. Submit once, poll get_motion_edit, and review before apply_motion_edit.', {
+  api('edit_key_poses', 'POST', targetPath.replace('motionEdits', 'keyPoseEdits'), 'Use swing-edit to regenerate an existing scene performance around explicit compatible key poses. Consumes credits. Source motion determines duration. Submit once, poll get_motion_edit, and review before apply_motion_edit.', {
     ...target, keyPoses, prompt: editProperties.prompt, sampler: editProperties.sampler, seed: editProperties.seed,
   }, [...Object.keys(target), 'keyPoses'], pathParameters, editGuidance),
   api('list_motion_edits', 'GET', targetPath, 'List the edit history for one scene object timeline slot. Use this to recover a submitted job after an uncertain response.', target, Object.keys(target), pathParameters),
   api('get_motion_edit', 'GET', `${targetPath}/{jobID}`, 'Check an edit job. A completed job returns outputBvhURL and available pose information. Reading status does not regenerate motion or apply it.', {
-    ...target, jobID: string('Hermes motion edit job ID.'),
+    ...target, jobID: string('swing-edit motion edit job ID.'),
   }, [...Object.keys(target), 'jobID'], [...pathParameters, { name: 'jobID', location: 'path' }]),
   api('apply_motion_edit', 'POST', `${targetPath}/{jobID}/apply`, 'Apply a reviewed, completed edit to its existing scene timeline slot. Replaces that slot’s motion. The MCP checks that the job belongs to the supplied slot before applying it.', {
-    ...target, jobID: string('Completed, reviewed Hermes motion edit job ID.'),
+    ...target, jobID: string('Completed, reviewed swing-edit motion edit job ID.'),
   }, [...Object.keys(target), 'jobID'], [...pathParameters, { name: 'jobID', location: 'path' }], 'Application may have succeeded. Check get_scene before applying again.'),
   {
     name: 'analyze_motion', handler: 'analyze_motion',
@@ -86,5 +86,5 @@ export function validateGameArguments(name, args) {
     if (args.leftFootJoint === args.rightFootJoint) throw new Error('Left and right foot joints must be distinct.');
     trim(args.startFrame, args.endFrame, 'frames');
   }
-  if (['edit_motion', 'edit_key_poses', 'save_key_poses'].includes(name)) validateHermesArguments(args, { allowEmptyPoses: name === 'save_key_poses' });
+  if (['edit_motion', 'edit_key_poses', 'save_key_poses'].includes(name)) validateSwingEditArguments(args, { allowEmptyPoses: name === 'save_key_poses' });
 }

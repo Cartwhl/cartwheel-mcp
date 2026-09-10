@@ -9,7 +9,7 @@
     "provenance": {
       "jobID": "motion-editor-job-01M23B7P77EAG32QFT9YDCTKJ4",
       "characterID": "char-upload-MHR",
-      "model": "hermes",
+      "model": "swing-edit",
       "prompt": "A person doing a friendly right hand wave while standing upright and facing forward. They raise their right hand beside their shoulder, wave hello, and lower the hand to their side. Their left arm rests at their side and their head stays upright.",
       "seed": 202609111,
       "handPose": "left relaxed; right open_loose"

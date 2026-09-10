@@ -1,5 +1,5 @@
 {
-  "name": "Hermes SOMA-30",
+  "name": "swing-edit SOMA-30",
   "rotationFormat": "local axis-angle radians",
   "coordinateSystem": "Y-up, meters",
   "note": "Model pose order for advanced hand/foot/end-effector constraints. Scene BVH order and MHR joint frames differ; convert compatible poses before use.",

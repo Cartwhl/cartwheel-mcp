@@ -1,6 +1,6 @@
-# Hermes: text generation and motion editing
+# swing-edit: text generation and motion editing
 
-Hermes creates a fresh performance from text or regenerates motion around paths, poses and selected body controls. It is a separate generation option from Swing. Use the **Hermes** name in user-facing explanations. `edit_motion` is its MCP entry point; do not pass `hermes` or `swing-edit` to `generate_motion.requestedModel`, whose API is different.
+swing-edit creates a fresh performance from text or regenerates motion around paths, poses and selected body controls. It is a separate generation option from Swing. Use the **swing-edit** name in user-facing explanations. `edit_motion` is its MCP entry point; do not pass `swing-edit` to `generate_motion.requestedModel`, whose API is different.
 
 ## Start with text
 
@@ -25,7 +25,7 @@ Example text-only request, after inspecting the scene:
 }
 ```
 
-For MHR game animation, start with Hermes and inspect the unmodified export. The bundled Motion Playground uses Hermes body performances and deliberate static hand poses. Its MHR pose correctives are part of the mesh deformation model, not a shoulder rotation workaround. Do not enable the rejected shoulder-direction patch.
+For MHR game animation, start with swing-edit and inspect the unmodified export. The bundled Motion Playground uses swing-edit body performances and deliberate static hand poses. Its MHR pose correctives are part of the mesh deformation model, not a shoulder rotation workaround. Do not enable the rejected shoulder-direction patch.
 
 ## Available primitives
 
@@ -36,8 +36,8 @@ For MHR game animation, start with Hermes and inspect the unmodified export. The
 | Root facing | `root2d.global_root_heading` | Optional unit `[cos(yaw), sin(yaw)]` pairs, one per waypoint. |
 | Full-body stamps | `constraints[].type: "fullbody"` | Timed local axis-angle rotations in radians plus world root positions in meters; optional `smooth_root_2d`. |
 | Native editor poses | `edit_key_poses.keyPoses` | Exact scene BVH bone order, including End Sites; native source position units; original frame cadence. Source duration controls this operation. |
-| One hand or foot | `left-hand`, `right-hand`, `left-foot`, `right-foot` constraint types | Pose-derived end-effector position/orientation controls. Require Hermes SOMA-30 or SOMA-77 pose order. |
-| Selected effectors | `type: "end-effector"`, `joint_names` | Select `LeftHand`, `RightHand`, `LeftFoot`, `RightFoot`, and/or `Hips`; same Hermes pose contract. |
+| One hand or foot | `left-hand`, `right-hand`, `left-foot`, `right-foot` constraint types | Pose-derived end-effector position/orientation controls. Require swing-edit SOMA-30 or SOMA-77 pose order. |
+| Selected effectors | `type: "end-effector"`, `joint_names` | Select `LeftHand`, `RightHand`, `LeftFoot`, `RightFoot`, and/or `Hips`; same swing-edit pose contract. |
 | Curved repathing | One `type: "twoPassRepath"` envelope | Backend-planned strong recovery along a curve, with heading, handles, holds and optional pose/effector stamps. |
 | Pose persistence | `save_key_poses` | Saves the full pose list without generation; `[]` clears saved poses. Read back with `get_scene`. |
 | History and preview | `list_motion_edits`, `get_motion_edit` | Reads job state and output. Does not replace scene animation. |
@@ -57,7 +57,7 @@ node sample-poses.mjs --input scene-source.bvh --frames 24,60 \
   --positions offset_relative --out poses.json
 ```
 
-For MHR pose editing, prefer `edit_key_poses`: the service has a dedicated MHR pose conversion path. Inline `fullbody` can remap compatible source BVH orders. **Hand/foot/end-effector constraints do not perform that remap:** their `local_joints_rot` must already be in the deployed Hermes SOMA-30 or SOMA-77 order. A 30-element array alone does not establish compatibility. Use `hermes-skeleton.json` in the installed game example for the SOMA-30 names; supply correctly converted poses. Do not feed MHR's 127-joint snapshots or Axel snapshots directly into an end-effector constraint.
+For MHR pose editing, prefer `edit_key_poses`: the service has a dedicated MHR pose conversion path. Inline `fullbody` can remap compatible source BVH orders. **Hand/foot/end-effector constraints do not perform that remap:** their `local_joints_rot` must already be in the deployed swing-edit SOMA-30 or SOMA-77 order. A 30-element array alone does not establish compatibility. Use `swing-edit-skeleton.json` in the installed game example for the SOMA-30 names; supply correctly converted poses. Do not feed MHR's 127-joint snapshots or Axel snapshots directly into an end-effector constraint.
 
 End-effector controls use a complete compatible pose to derive the selected target position and orientation; they also carry root position/heading. They are not arbitrary XYZ-only pins or guaranteed collision-free contacts. To request a hand reaching somewhere else, first solve/author a compatible pose with that hand at the target, then constrain it. The same shape as `fullbody` is used, plus `joint_names` for the generic type.
 
@@ -65,7 +65,7 @@ To combine a simple path and poses, place `root2d` and `fullbody` entries togeth
 
 ## Curves, holds and repathing with poses
 
-Use one envelope with `strategy: "builtIn"` and `recoveryMode: "strong"`. This asks Hermes to preserve source motion detail while following the new curve. It is a constrained editing operation, unlike text-only generation.
+Use one envelope with `strategy: "builtIn"` and `recoveryMode: "strong"`. This asks swing-edit to preserve source motion detail while following the new curve. It is a constrained editing operation, unlike text-only generation.
 
 ```json
 {
@@ -100,11 +100,11 @@ Add either native `keyPoses` alongside the sole envelope, or inline pose/effecto
 
 Review the source performance and an untouched export on the intended character before adjusting playback. If text-only candidates repeat an unsuitable arm posture, author a small set of full-body poses with the desired elbow bend and hand clearance, then use `keyPoses` to regenerate around them. Keep each pose in the exact native scene skeleton, cadence and units. Do not substitute a browser shoulder offset for a reviewed export.
 
-The included game run demonstrates this process with 13 native Axel pose guides in `examples/game/assets/run.hermes-poses.json`. With an inspected matching scene slot, pass its `keyPoses`, `prompt` and `seed` to `edit_motion` with `duration: 5`. Review the result on MHR, including the in-between frames, before applying and exporting it. The file is not an MHR pose array and must not be attached to a different skeleton by joint count alone. The guide poses and hand presets are authored inputs; Hermes generates the body performance around the guides. See the game audit for the selected stride and remaining limits.
+The included game run demonstrates this process with 13 native Axel pose guides in `examples/game/assets/run.swing-edit-poses.json`. With an inspected matching scene slot, pass its `keyPoses`, `prompt` and `seed` to `edit_motion` with `duration: 5`. Review the result on MHR, including the in-between frames, before applying and exporting it. The file is not an MHR pose array and must not be attached to a different skeleton by joint count alone. The guide poses and hand presets are authored inputs; swing-edit generates the body performance around the guides. See the game audit for the selected stride and remaining limits.
 
 ## Looping, stitching and game preparation
 
-`loop_motion` and `stitch_motions` operate on completed motion IDs and create new motion IDs. They are distinct from Hermes scene edits. Do not substitute an editor job ID for a motion ID or expect these operations to pick up an edited scene automatically. They are synchronous model operations; allow up to four minutes and do not automatically retry an uncertain mutation.
+`loop_motion` and `stitch_motions` operate on completed motion IDs and create new motion IDs. They are distinct from swing-edit scene edits. Do not substitute an editor job ID for a motion ID or expect these operations to pick up an edited scene automatically. They are synchronous model operations; allow up to four minutes and do not automatically retry an uncertain mutation.
 
 For an edited scene, download its output/export and run the local `prepare-game.mjs` helper to measure travel, contacts and seams. Keep travel before selecting an interior gait cycle. Use explicit source hashes, frame windows and authored gameplay events. Contacts are kinematic estimates; temporal/body masks and loop blending need visual review on the intended character. See `cartwheel://workflows/game` for the playable controller and preparation contract.
 

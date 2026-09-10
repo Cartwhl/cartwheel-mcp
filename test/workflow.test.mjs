@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/server.mjs';
-import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, hermesWorkflowUri, hermesWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt } from '../src/workflows.mjs';
+import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt } from '../src/workflows.mjs';
 
 async function connect(t) {
   const server = createServer({ apiKey: 'workflow-test-key', fetchImpl: async () => assert.fail('Workflow discovery must not call the API') });
@@ -21,8 +21,8 @@ test('Blender workflow is discoverable and packaged files exist', async t => {
   assert.ok(capabilities.prompts);
   assert.ok(capabilities.resources);
   assert.match(client.getInstructions(), /grounded_blender_scene/);
-  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,hermesWorkflowPrompt,characterWorkflowPrompt]);
-  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,hermesWorkflowUri,characterWorkflowUri]);
+  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt]);
+  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri]);
   const response = await client.readResource({ uri: workflowUri });
   const guide = response.contents[0].text;
   for (const term of ['Gaussian', 'source ankle rotation', 'verify_motion.py', 'render_examples.py', 'Generation consumes credits']) assert.ok(guide.includes(term), term);
@@ -72,12 +72,16 @@ test('game workflow discovers a complete runnable example and explicit preparati
 });
 
 
-test('Hermes workflow exposes text-only generation, all constraint primitives and scene export', async t => {
+test('swing-edit workflow exposes text-only generation, all constraint primitives and scene export', async t => {
   const client = await connect(t);
-  assert.match(client.getInstructions(), /hermes_motion/);
-  const guide = (await client.readResource({uri: hermesWorkflowUri})).contents[0].text;
+  assert.equal(swingEditWorkflowPrompt, 'swing_edit_motion');
+  assert.equal(swingEditWorkflowUri, 'cartwheel://workflows/swing-edit');
+  assert.match(client.getInstructions(), /swing_edit_motion/);
+  const guide = (await client.readResource({uri: swingEditWorkflowUri})).contents[0].text;
   for (const term of ['text-only', 'root2d', 'fullbody', 'end-effector', 'left-hand', 'right-hand', 'left-foot', 'right-foot', 'twoPassRepath', 'save_key_poses', 'export_scene', 'SOMA-30', 'pathProgress', 'not a Bézier parameter']) assert.ok(guide.includes(term), term);
-  const response = await client.getPrompt({name: hermesWorkflowPrompt, arguments: {scene: 'A natural walking game character'}});
+  const directory = guide.match(/Installed example directory: (.+)/)[1];
+  for (const file of ['swing-edit-skeleton.json', 'assets/run.swing-edit-poses.json']) await access(`${directory}/${file}`);
+  const response = await client.getPrompt({name: swingEditWorkflowPrompt, arguments: {scene: 'A natural walking game character'}});
   assert.match(response.messages[1].content.text, /walking game/);
 });
 

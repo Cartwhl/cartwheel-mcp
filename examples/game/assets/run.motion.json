@@ -9,7 +9,7 @@
     "provenance": {
       "jobID": "motion-editor-job-01M23FQJKQB0YXRTNDKS64A0J0",
       "characterID": "char-upload-MHR",
-      "model": "hermes",
+      "model": "swing-edit",
       "prompt": "A person doing a steady forward run with relaxed shoulders and natural alternating arm swings.",
       "seed": 202609132,
       "handPose": "fist_relaxed",

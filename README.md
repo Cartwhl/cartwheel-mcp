@@ -2,7 +2,7 @@
 
 **Create and auto-rig characters. Generate, capture and edit their motion.**
 
-Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Create a character from text or an image, upload and auto-rig your own model, then animate it. Generate body motion from text with **Hermes**, constrain it with Motion Editor controls, or capture up to four performers from a video with Comic 4, including facial animation. Edit performances with paths and poses, loop or stitch clips, measure motion metadata, and run the bundled Three.js game reference.
+Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com)'s public API. Create a character from text or an image, upload and auto-rig your own model, then animate it. Generate body motion from text with **swing-edit**, constrain it with Motion Editor controls, or capture up to four performers from a video with Comic 4, including facial animation. Edit performances with paths and poses, loop or stitch clips, measure motion metadata, and run the bundled Three.js game reference.
 
 [![After Hours — generated motion rendered in Blender](docs/media/after-hours.gif)](docs/media/after-hours.mp4)
 
@@ -10,9 +10,9 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 
 ## Three generated characters, one Blender scene
 
-[![Lantern Port — three generated characters animated with Comic 4 and Hermes](docs/media/lantern-port.jpg)](docs/media/lantern-port.mp4)
+[![Lantern Port — three generated characters animated with Comic 4 and swing-edit](docs/media/lantern-port.jpg)](docs/media/lantern-port.mp4)
 
-**Lantern Port** takes three text descriptions through character generation and auto-rigging, combines Comic 4 acting with Hermes walking, then renders a miniature skyport with four camera shots and a frog close-up. The example includes the three rigged assets, exact prompts, reproducible Blender scripts, and the reviewed shoulder, face and Gaussian foot-contact fixes.
+**Lantern Port** takes three text descriptions through character generation and auto-rigging, combines Comic 4 acting with swing-edit walking, then renders a miniature skyport with four camera shots and a frog close-up. The example includes the three rigged assets, exact prompts, reproducible Blender scripts, and the reviewed shoulder, face and Gaussian foot-contact fixes.
 
 [Watch Lantern Port](docs/media/lantern-port.mp4) · [Rebuild the scene](examples/lantern-port/README.md) · [Create and auto-rig characters](src/workflows/characters.md)
 
@@ -79,15 +79,15 @@ For a local terminal session, you can instead copy `.env.example` to `.env`, ent
 
 | Option | Use it for | Entry point |
 | --- | --- | --- |
-| **Hermes** | Fresh text-to-motion, paths, poses and constrained editing. Used by the MHR game example. | `edit_motion`; read the `hermes_motion` prompt or `cartwheel://workflows/hermes`. |
+| **swing-edit** | Fresh text-to-motion, paths, poses and constrained editing. Used by the MHR game example. | `edit_motion`; read the `swing_edit_motion` prompt or `cartwheel://workflows/swing-edit`. |
 | Swing | Standalone text generation in batches. | `generate_motion` with `requestedModel: "swing"`. |
 | Comic 4 | Video capture with one to four performers and optional faces. | `generate_motion_from_video`. |
 
-For Hermes, ask:
+For swing-edit, ask:
 
-> Use the Hermes workflow. Find an accessible seed motion, create an isolated scene on MHR, and generate a new relaxed walk from text only. Review the completed performance, apply it, then export the scene with root travel intact.
+> Use the swing-edit workflow. Find an accessible seed motion, create an isolated scene on MHR, and generate a new relaxed walk from text only. Review the completed performance, apply it, then export the scene with root travel intact.
 
-Hermes uses an existing scene timeline slot as its skeleton and export template. Text-only requests omit both `constraints` and `keyPoses`; the old body performance does not condition generation. Source-dependent hierarchy and unmapped finger channels still need attention. The [Hermes guide](src/workflows/hermes.md) covers character selection, static hand poses and the complete lifecycle. **Hermes is not a `generate_motion.requestedModel` value**; neither is `swing-edit`.
+swing-edit uses an existing scene timeline slot as its skeleton and export template. Text-only requests omit both `constraints` and `keyPoses`; the old body performance does not condition generation. Source-dependent hierarchy and unmapped finger channels still need attention. The [swing-edit guide](src/workflows/swing-edit.md) covers character selection, static hand poses and the complete lifecycle. **Use `edit_motion` for swing-edit**; `generate_motion.requestedModel` belongs to the separate standalone generation API.
 
 For a standalone Swing batch, try:
 
@@ -146,14 +146,14 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 | `create_scene` | Create an editable scene from accessible motion IDs. |
 | `loop_motion` | Trim and loop an existing motion; creates a new motion. |
 | `stitch_motions` | Trim/blend two motions in order; creates a new motion. |
-| `edit_motion` | Generate with **Hermes** from text, or constrain motion with paths, poses, hand/foot controls and curved repathing. **Consumes credits.** |
-| `edit_key_poses` | Regenerate with **Hermes** around compatible native pose snapshots. **Consumes credits.** |
+| `edit_motion` | Generate with **swing-edit** from text, or constrain motion with paths, poses, hand/foot controls and curved repathing. **Consumes credits.** |
+| `edit_key_poses` | Regenerate with **swing-edit** around compatible native pose snapshots. **Consumes credits.** |
 | `save_key_poses` | Save or clear the complete editor pose list without generation. |
 | `set_scene_character` | Retarget an existing scene object to the selected accessible character. |
 | `list_motion_edits` | Inspect edit history for a scene timeline slot. |
 | `get_motion_edit` | Check a submitted edit and retrieve its completed output. |
 | `apply_motion_edit` | Apply a reviewed, completed edit to its verified scene slot, or revert using a completed historical job. |
-| `export_scene` | Export the scene on its chosen characters, including applied Hermes edits. |
+| `export_scene` | Export the scene on its chosen characters, including applied swing-edit edits. |
 | `get_scene_exports` | Check scene exports and retrieve fresh download links. |
 | `analyze_motion` | Measure contacts, root travel, strides, flight candidates and loop endpoints; inspect setup-frame handling. |
 
@@ -163,7 +163,7 @@ List pagination uses `nextToken`. Search requires `pageSize` and uses the respon
 
 Use **`create_rigged_character`** or **`cartwheel://workflows/characters`**. Ask your assistant:
 
-> Create a friendly forest courier from this reference image, wait for the rigged character, and test a short Hermes walk in Blender.
+> Create a friendly forest courier from this reference image, wait for the rigged character, and test a short swing-edit walk in Blender.
 
 Or:
 
@@ -178,21 +178,21 @@ For a reference image, first use `create_media_upload` and upload the PNG, JPG, 
 
 Wait for `uploadStatus: "COMPLETE"` and actual deliverables. **For uploaded models, use `baseFbxURL` or `baseGlbURL` for the rigged result; `characterFileURL` may still be the original unrigged mesh.** Generation's `3D_CONVERT_COMPLETE` is not rig completion. Failed or validation-required jobs need inspection, not automatic resubmission.
 
-The [complete character workflow](src/workflows/characters.md) covers optional configs, processing states, timeout recovery, downloads and reuse with Hermes. Review the resulting rig with a short animation before building a full scene. Auto-rigging does not promise facial blendshapes or conversion to MHR.
+The [complete character workflow](src/workflows/characters.md) covers optional configs, processing states, timeout recovery, downloads and reuse with swing-edit. Review the resulting rig with a short animation before building a full scene. Auto-rigging does not promise facial blendshapes or conversion to MHR.
 
-## Hermes game animation and Motion Editor
+## swing-edit game animation and Motion Editor
 
-Version **0.6.0** includes the [Hermes Motion Playground](examples/game/README.md): one MHR character, four Hermes body performances, idle/walk/run transitions, an interruptible right-arm signal, contact-driven effects and a small crowd. Static hand poses are chosen explicitly. The native MHR pose corrections handle deformation; there is no consumer shoulder-rotation patch.
+Version **0.7.0** includes the [swing-edit Motion Playground](examples/game/README.md): one MHR character, four swing-edit body performances, idle/walk/run transitions, an interruptible right-arm signal, contact-driven effects and a small crowd. Static hand poses are chosen explicitly. The native MHR pose corrections handle deformation; there is no consumer shoulder-rotation patch.
 
 ```sh
 npm run example:game
 ```
 
-Open the printed localhost URL. The bundled game needs no API key. Walk/run cadence follows actual movement distance through reviewed interior cycles. Hip sway is retained; the signal replaces the corresponding right-arm locomotion tracks. Source & metrics shows each Hermes prompt and the playback measurements. Each clip’s metadata also records its seed, skeleton identity and source/prepared hashes. The [preparation helper](examples/game/README.md#prepare-a-replacement-clip) handles setup frames, trims, event remapping and measured travel.
+Open the printed localhost URL. The bundled game needs no API key. Walk/run cadence follows actual movement distance through reviewed interior cycles. Hip sway is retained; the signal replaces the corresponding right-arm locomotion tracks. Source & metrics shows each swing-edit prompt and the playback measurements. Each clip’s metadata also records its seed, skeleton identity and source/prepared hashes. The [preparation helper](examples/game/README.md#prepare-a-replacement-clip) handles setup frames, trims, event remapping and measured travel.
 
 Two MCP workflows work together:
 
-- **`hermes_motion`** / **`cartwheel://workflows/hermes`**: generate, constrain, review, apply and export.
+- **`swing_edit_motion`** / **`cartwheel://workflows/swing-edit`**: generate, constrain, review, apply and export.
 - **`game_ready_animation`** / **`cartwheel://workflows/game`**: prepare compatible assets and integrate them into the playable controller.
 
 ```text
@@ -203,22 +203,22 @@ find an accessible seed motion → create_scene → get_scene
   → client prepares BVH + metadata → Three.js game
 ```
 
-The [Hermes workflow](src/workflows/hermes.md) documents every supported Motion Editor primitive:
+The [swing-edit workflow](src/workflows/swing-edit.md) documents every supported Motion Editor primitive:
 
 | Primitive | Controls |
 | --- | --- |
 | Fresh text motion | Prompt, duration and optional seed; omit constraints and key poses. |
 | Root path and facing | Sparse or dense X/Z waypoints and optional heading pairs. |
 | Full-body or native key poses | Timed local rotations and root positions; native snapshots retain the exact scene BVH order and units. |
-| Hand, foot and selected effectors | Left/right hand or foot, or a selected set of hands, feet and hips. These require correctly converted Hermes SOMA-30 or SOMA-77 poses. |
+| Hand, foot and selected effectors | Left/right hand or foot, or a selected set of hands, feet and hips. These require correctly converted swing-edit SOMA-30 or SOMA-77 poses. |
 | Curved repathing | Bézier handles, holds, tangent/original heading, source-detail preservation and optional pose/effector stamps. |
 | Editor state and delivery | Save/clear poses, inspect history, apply/revert, change character and export the applied scene. |
 
-Read the coordinate contracts before constructing constraints: inline positions are meters, native pose positions retain source units, and rotations are axis-angle radians. End-effector constraints do **not** remap arbitrary MHR or Axel pose arrays. The bundled [SOMA-30 joint order](examples/game/hermes-skeleton.json) identifies the expected order; it is not a rig converter. Ordinary inline constraints and native key poses cannot be mixed; the documented built-in repath envelope is the supported exception.
+Read the coordinate contracts before constructing constraints: inline positions are meters, native pose positions retain source units, and rotations are axis-angle radians. End-effector constraints do **not** remap arbitrary MHR or Axel pose arrays. The bundled [SOMA-30 joint order](examples/game/swing-edit-skeleton.json) identifies the expected order; it is not a rig converter. Ordinary inline constraints and native key poses cannot be mixed; the documented built-in repath envelope is the supported exception.
 
 Edits are asynchronous and consume credits. Submit once and poll the existing job. Loop/stitch operations act on **motion IDs**, not editor job IDs or unapplied scene edits; they create new motion IDs and can take up to four minutes. After an uncertain mutation, inspect existing state before resubmitting.
 
-Contacts are kinematic estimates. Authored signal/VFX timing is separate. Selected cycles, transitions, masks and character retargets still need visual review; switching to Hermes is not a general repair for every motion/character combination. The [audit](examples/game/AUDIT.md) records the changes and limits.
+Contacts are kinematic estimates. Authored signal/VFX timing is separate. Selected cycles, transitions, masks and character retargets still need visual review; switching to swing-edit is not a general repair for every motion/character combination. The [audit](examples/game/AUDIT.md) records the changes and limits.
 
 See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **30 tools and five workflows**.
 
@@ -318,7 +318,7 @@ npm pack --dry-run
 
 Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, character generation, model/image upload, auto-rig submission and status handling, motion generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
-`src/tools.json`, `src/game-tools.mjs`, `src/hermes-constraints.mjs`, `src/scene-tools.mjs` and `src/character-tools.mjs` contain the selected authenticated API contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+`src/tools.json`, `src/game-tools.mjs`, `src/swing-edit-constraints.mjs`, `src/scene-tools.mjs` and `src/character-tools.mjs` contain the selected authenticated API contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
 
 ## Distribution
 

@@ -1,8 +1,8 @@
-# Hermes Motion Playground
+# swing-edit Motion Playground
 
-A Three.js integration study with **one MHR character with full-body pose corrections and four Hermes body performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it. Use **Close view** to inspect the character, then drag to orbit.
+A Three.js integration study with **one MHR character with full-body pose corrections and four swing-edit body performances**: idle, walk, run, and a right-hand signal. The clips, prepared metadata, model and source are bundled. No API key is needed to play it. Use **Close view** to inspect the character, then drag to orbit.
 
-Hermes generates every body performance in this set. The run adds 13 authored pose guides to control its arm clearance; Hermes generates the motion between the guides. Hands use explicit static poses: relaxed for idle/walk, loose fists for run and an open right hand for the signal. The MHR mesh, weights and native pose corrections are unchanged; no shoulder rotation workaround is enabled. See the [quality audit](AUDIT.md) for what was checked and the limits of the controller.
+swing-edit generates every body performance in this set. The run adds 13 authored pose guides to control its arm clearance; swing-edit generates the motion between the guides. Hands use explicit static poses: relaxed for idle/walk, loose fists for run and an open right hand for the signal. The MHR mesh, weights and native pose corrections are unchanged; no shoulder rotation workaround is enabled. See the [quality audit](AUDIT.md) for what was checked and the limits of the controller.
 
 From the repository root:
 
@@ -33,9 +33,9 @@ This is an integration reference on a flat surface. It does not implement naviga
 
 Ask your assistant:
 
-> Use Hermes to generate a matching MHR walking clip for the game reference. Review and apply it in an isolated scene, export the edited scene, then measure travel and select a steady cycle before replacing the bundled clip.
+> Use swing-edit to generate a matching MHR walking clip for the game reference. Review and apply it in an isolated scene, export the edited scene, then measure travel and select a steady cycle before replacing the bundled clip.
 
-- Generation/editing: **`hermes_motion`** / **`cartwheel://workflows/hermes`**.
+- Generation/editing: **`swing_edit_motion`** / **`cartwheel://workflows/swing-edit`**.
 - Game integration: **`game_ready_animation`** / **`cartwheel://workflows/game`**.
 - Scene lifecycle: `create_scene`, `get_scene`, `set_scene_character`, `edit_motion`, `edit_key_poses`, `save_key_poses`, `list_motion_edits`, `get_motion_edit`, `apply_motion_edit`, `export_scene`, `get_scene_exports`.
 - Motion-library processing: `loop_motion`, `stitch_motions`, `analyze_motion`. These use motion IDs; an editor job ID is not a motion ID.
@@ -44,7 +44,7 @@ The [full workflow](../../src/workflows/game.md) includes complete scene/job lif
 
 ## Prepare a replacement clip
 
-Generate or retarget to the **same native character skeleton** using the MCP. Keep original root travel (`moveInPlace: false`) until after measuring speed and stride length. For Hermes, review and apply the edit, then request BVH with `export_scene` and retrieve its link with `get_scene_exports`. Download it using your MCP client’s authorized local tools. `get_motion` on the seed ID returns the original performance, not the edited scene. Keep signed URLs and raw API records private.
+Generate or retarget to the **same native character skeleton** using the MCP. Keep original root travel (`moveInPlace: false`) until after measuring speed and stride length. For swing-edit, review and apply the edit, then request BVH with `export_scene` and retrieve its link with `get_scene_exports`. Download it using your MCP client’s authorized local tools. `get_motion` on the seed ID returns the original performance, not the edited scene. Keep signed URLs and raw API records private.
 
 Inspect the file first:
 
@@ -77,7 +77,7 @@ These numbers describe the bundled walk, **not a rule for other motions**. Selec
 
 Replace **both** files under `assets/` only after review. The browser checks the prepared BVH hash against its sidecar. A matching skeleton ID identifies names, parent relationships and rest offsets normalized to meters/Y-up; it does not certify skin weights, mesh quality or root coordinate conventions. The reference also checks the loaded character’s rest offsets. Travel removal and heading alignment use the root’s world pose, including animated parent transforms, then write the result back into parent-local coordinates. The full BVH hierarchy stays intact; a bind-pose parent transform is not a substitute for its animated transform.
 
-Before preparing a replacement, play a self-contained animated GLB/FBX export and compare it with the source performance. If it is already malformed, investigate the retargeted pose before adding consumer-side corrections. Inspect the unanimated bind pose, arms down, arms raised, wrists and finger/contact behavior. Matching names, offsets and inverse binds alone is insufficient. The current Hermes set uses the exported MHR body rotations; see [AUDIT.md](AUDIT.md).
+Before preparing a replacement, play a self-contained animated GLB/FBX export and compare it with the source performance. If it is already malformed, investigate the retargeted pose before adding consumer-side corrections. Inspect the unanimated bind pose, arms down, arms raised, wrists and finger/contact behavior. Matching names, offsets and inverse binds alone is insufficient. The current swing-edit set uses the exported MHR body rotations; see [AUDIT.md](AUDIT.md).
 
 ### Setup frames and trimming
 
@@ -117,9 +117,9 @@ node examples/game/sample-poses.mjs \
 
 The output records the source hash, cadence, and Three BVHLoader bone order, including End Sites. Supply its `keyPoses` array to `edit_key_poses` with the scene ID, object reference and timeline index. Positions retain the scene BVH’s native units; rotations are axis-angle radians. Sampled snapshots preserve existing poses; author different compatible snapshots to request a changed pose. The helper does not rename or retarget bones.
 
-The bundled run is a worked pose-guided example: [run.hermes-poses.json](assets/run.hermes-poses.json) contains 13 authored poses in native Axel/Three order, including End Sites. Start with an inspected matching Axel scene slot, check its hierarchy and units, and pass the file’s `keyPoses`, `prompt` and `seed` to `edit_motion` with `duration: 5`. These poses are not in the MHR game-export skeleton. Review the generated MHR export before selecting a gameplay cycle.
+The bundled run is a worked pose-guided example: [run.swing-edit-poses.json](assets/run.swing-edit-poses.json) contains 13 authored poses in native Axel/Three order, including End Sites. Start with an inspected matching Axel scene slot, check its hierarchy and units, and pass the file’s `keyPoses`, `prompt` and `seed` to `edit_motion` with `duration: 5`. These poses are not in the MHR game-export skeleton. Review the generated MHR export before selecting a gameplay cycle.
 
-Use `edit_motion.constraints` for root paths/facing, full-body stamps, hand/foot or selected effector controls, and curved repathing. Inline positions are meters. Ordinary edits combine `root2d` and `fullbody` inside `constraints`; do not also supply `keyPoses`. The supported exception is one built-in `twoPassRepath` envelope with native poses. End-effector arrays require converted Hermes SOMA-30 or SOMA-77 order, not these MHR snapshots. Read the [Hermes workflow](../../src/workflows/hermes.md) for every primitive, handles, holds, heading rules and units. Poll, inspect, apply, then export the scene.
+Use `edit_motion.constraints` for root paths/facing, full-body stamps, hand/foot or selected effector controls, and curved repathing. Inline positions are meters. Ordinary edits combine `root2d` and `fullbody` inside `constraints`; do not also supply `keyPoses`. The supported exception is one built-in `twoPassRepath` envelope with native poses. End-effector arrays require converted swing-edit SOMA-30 or SOMA-77 order, not these MHR snapshots. Read the [swing-edit workflow](../../src/workflows/swing-edit.md) for every primitive, handles, holds, heading rules and units. Poll, inspect, apply, then export the scene.
 
 ## Rebuild the MHR character
 
@@ -145,6 +145,6 @@ The helper checks surface and facial-target correspondence, preserves static ide
 - `serve.mjs`: loopback-only preview server.
 - [ASSETS.md](ASSETS.md): character and motion provenance.
 
-See [AUDIT.md](AUDIT.md) for the Hermes asset review and controller limits. `npm test` checks MCP trust boundaries, frame/unit/root handling, steady phase clocks, cycle seams, gesture replacement, crowd steering, MHR deformation against independent reference poses, sampled import fidelity against untouched animated exports, and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
+See [AUDIT.md](AUDIT.md) for the swing-edit asset review and controller limits. `npm test` checks MCP trust boundaries, frame/unit/root handling, steady phase clocks, cycle seams, gesture replacement, crowd steering, MHR deformation against independent reference poses, sampled import fidelity against untouched animated exports, and interruption. Review the rendered result too: start/stop, walk/run changes, motion across loop seams, gesture while walking, cancellation, diagonal input, boundaries, crowd phases, and mobile controls. Refresh the browser after changing example files; this small server has no hot reload.
 
 Built on the maintained [Three.js animation system](https://threejs.org/manual/en/animation-system.html), [BVHLoader](https://threejs.org/docs/pages/BVHLoader.html), [AnimationUtils](https://threejs.org/docs/pages/AnimationUtils.html) and [SkeletonUtils](https://threejs.org/docs/pages/module-SkeletonUtils.html).

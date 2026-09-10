@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hermes Motion Playground · Cartwheel MCP</title>
+  <title>swing-edit Motion Playground · Cartwheel MCP</title>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
-  <header><a class="brand" href="/" aria-label="Cartwheel Hermes Playground"><span class="brandmark">✳</span> cartwheel<span class="divider">/</span><span class="product">HERMES PLAYGROUND</span></a><span class="local">● LOCAL DEMO</span></header>
+  <header><a class="brand" href="/" aria-label="Cartwheel swing-edit Playground"><span class="brandmark">✳</span> cartwheel<span class="divider">/</span><span class="product">swing-edit Playground</span></a><span class="local">● LOCAL DEMO</span></header>
   <main>
-    <section class="intro"><div><p class="eyebrow">CARTWHEEL HERMES → THREE.JS</p><h1>Motion you can play.</h1><p class="subtitle">Four Hermes performances. One MHR character.</p></div><button id="details" class="quiet">Source &amp; metrics <span>↗</span></button></section>
-    <p class="engine-note" role="note"><strong>Powered by Hermes:</strong> body motion from text, with pose guides for a more natural running arm swing.</p>
+    <section class="intro"><div><p class="eyebrow">Cartwheel swing-edit → Three.js</p><h1>Motion you can play.</h1><p class="subtitle">Four swing-edit performances. One MHR character.</p></div><button id="details" class="quiet">Source &amp; metrics <span>↗</span></button></section>
+    <p class="engine-note" role="note"><strong>Powered by swing-edit:</strong> body motion from text, with pose guides for a more natural running arm swing.</p>
     <section class="stage" aria-label="Interactive animated scene">
       <canvas id="view" aria-label="A character and small crowd in a motion playground"></canvas>
       <div id="loading" role="status">Loading the playground…</div>
@@ -22,8 +22,8 @@
     <section class="controls" aria-label="Animation controls"><div class="mode-group"><button data-mode="idle" class="active">Idle</button><button data-mode="walk">Walk</button><button data-mode="run">Run</button></div><button id="signal" class="primary">Signal <span>↗</span></button><button id="interrupt" class="quiet">Interrupt</button><button id="close-view" class="quiet" aria-pressed="false">Close view</button><label class="crowd">Crowd <input id="crowd" aria-label="Crowd size" type="range" min="0" max="8" value="0"><output id="crowd-value">0</output></label><label class="contacts-toggle"><input type="checkbox" id="contacts" checked> Footfall effects</label></section>
     <section class="notes"><div><span class="note-number">01</span><div><strong>Distance drives the feet</strong><p>Reviewed walk/run cycles follow actual movement at a steady cadence.</p></div></div><div><span class="note-number">02</span><div><strong>Move and signal together</strong><p>The gesture layers over locomotion. Interrupt it at any moment.</p></div></div><div><span class="note-number">03</span><div><strong>A small, shared crowd</strong><p>Independent animation and pose corrections. Shared character assets.</p></div></div></section>
   </main>
-  <footer><span>Body motion by Cartwheel Hermes · Rendered live in Three.js</span><span>No API key in the browser.</span></footer>
-  <dialog id="source-dialog"><div class="dialog-top"><h2>Four Hermes performances.</h2><button id="close-details" aria-label="Close details">×</button></div><p>Body motion generated with Hermes through the Cartwheel MCP. The run uses authored pose guides; Hermes generates the motion between them. Hands use static poses. Contact times are kinematic estimates; the signal event was authored after review.</p><div id="source-content"></div><p class="small">This is an integration reference, not a performance guarantee. Frame rate and draw calls depend on your device, scene and crowd size. Loop diagnostics measure sample endpoints and need visual review.</p></dialog>
+  <footer><span>Body motion by Cartwheel swing-edit · Rendered live in Three.js</span><span>No API key in the browser.</span></footer>
+  <dialog id="source-dialog"><div class="dialog-top"><h2>Four swing-edit performances.</h2><button id="close-details" aria-label="Close details">×</button></div><p>Body motion generated with swing-edit through the Cartwheel MCP. The run uses authored pose guides; swing-edit generates the motion between them. Hands use static poses. Contact times are kinematic estimates; the signal event was authored after review.</p><div id="source-content"></div><p class="small">This is an integration reference, not a performance guarantee. Frame rate and draw calls depend on your device, scene and crowd size. Loop diagnostics measure sample endpoints and need visual review.</p></dialog>
   <script type="module" src="app.mjs"></script>
 </body>
 </html>

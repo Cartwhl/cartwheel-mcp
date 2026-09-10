@@ -302,5 +302,5 @@ def build_scene():
     n=comp.nodes;l=comp.links;layers=n.new('CompositorNodeRLayers');glare=n.new('CompositorNodeGlare');glare.inputs['Type'].default_value='Fog Glow';glare.inputs['Quality'].default_value='High';glare.inputs['Strength'].default_value=.20
     out=n.new('NodeGroupOutput');l.new(layers.outputs['Image'],glare.inputs['Image']);l.new(glare.outputs['Image'],out.inputs['Image'])
     scene.compositing_node_group=comp
-    scene['title']='LANTERN PORT';scene['character_count']=3;scene['body_animation_source']='Cartwheel Comic 4 and Hermes';scene['set_and_camera']='Authored in Blender'
+    scene['title']='LANTERN PORT';scene['character_count']=3;scene['body_animation_source']='Cartwheel Comic 4 and swing-edit';scene['set_and_camera']='Authored in Blender'
     return scene

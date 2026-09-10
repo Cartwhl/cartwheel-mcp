@@ -216,7 +216,7 @@ async function initialize() {
   $('interrupt').addEventListener('click', () => { player.signal.interrupt(); $('event').textContent = 'interrupted'; });
   for (const [name, m] of Object.entries(metadata)) {
     const row = document.createElement('section'); row.className = 'source-row';
-    const title = document.createElement('h3'); title.textContent = `Hermes · ${name}${m.source.provenance.keyPoseCount ? ` · ${m.source.provenance.keyPoseCount} pose guides` : ''}`;
+    const title = document.createElement('h3'); title.textContent = `swing-edit · ${name}${m.source.provenance.keyPoseCount ? ` · ${m.source.provenance.keyPoseCount} pose guides` : ''}`;
     const prompt = document.createElement('p'); prompt.textContent = m.source.provenance.prompt;
     const metrics = document.createElement('div'); metrics.className = 'source-metrics';
     for (const value of [`MHR · ${m.timing.frameCount} source frames · ${m.timing.fps.toFixed(0)} fps`, `${m.setupFrame.removedFrames} setup frames removed`, ...(cycles[name] ? [`Reviewed frames ${cycles[name].startFrame}–${cycles[name].endFrame}`, 'Short seam blend · steady playback', `${(profiles[name].distance / profiles[name].period).toFixed(2)} m/s cycle speed`] : [`${m.loopSeam.maximumJointAngleDegrees.toFixed(1)}° source endpoint seam`])]) {
