@@ -25,8 +25,8 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 
 ## 1. Get a Cartwheel API key
 
-1. Open [Cartwheel](https://getcartwheel.com), choose an API-enabled plan, and create your account. Complete email verification and any plan setup shown by the site.
-2. Open your Cartwheel dashboard and select **API keys**.
+1. Open [Cartwheel](https://getcartwheel.com), choose an API-enabled plan (Individual Pro or Team Pro or Team Scale), and create your account. Complete email verification and any plan setup shown by the site.
+2. Open your Cartwheel dashboard and select **[API keys](https://app.getcartwheel.com/api-keys)**.
 3. Create or reveal a key for your workspace/project. Key management may require a workspace administrator.
 4. Copy the **secret key value**. The project ID and API Gateway key ID are not substitutes.
 
