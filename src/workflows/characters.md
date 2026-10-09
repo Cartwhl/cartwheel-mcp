@@ -2,9 +2,11 @@
 
 Use this workflow to generate a new character from text or an image, or to import and auto-rig an existing model. All service calls use the caller's Cartwheel project key. The MCP client handles the selected local files; the MCP server does not run Blender or upload file bytes itself.
 
+For new generation, one batch may mix text-prompt and reference-image jobs. Each job supplies either a `prompt` or an uploaded `mediaID`, never both. The sum of requested final characters across all jobs and their `numVariations` values must not exceed 25; the number of jobs is not necessarily the number of characters.
+
 ## Generate from text
 
-1. Call `generate_character_batch` once with one or more jobs. Each job contains a `prompt` or an uploaded `mediaID`, never both. For example:
+1. Call `generate_character_batch` once with one or more jobs. For example:
 
    ```json
    { "batchName": "Forest couriers", "jobs": [
@@ -35,7 +37,12 @@ Use this workflow to generate a new character from text or an image, or to impor
 
    Use the exact returned media ID. The helper permits signed Cartwheel production storage only, rejects redirects, and sends no project API key to storage.
 
-3. Call `generate_character_batch` with `{ "jobs": [{ "mediaID": "media-REPLACE_ME" }] }`, omitting `prompt` from that job. The default `INSPIRATION` mode generates a new image from the reference. Set `referenceImageMode: "DIRECT"` to use the uploaded image unchanged, without image-generation billing; DIRECT supports only one character for that job. You may mix text and image jobs in one batch, with up to 25 final characters total. Use the same batch → list → character sequence as text generation. Do not send a local file path or arbitrary image URL in place of `mediaID`.
+3. Call `generate_character_batch` with `{ "jobs": [{ "mediaID": "media-REPLACE_ME" }] }`, omitting `prompt` from that job. Choose the image mode for that job:
+
+   - **INSPIRATION (default):** Generate a new image guided by the reference. Prefer this when the source is meant as visual inspiration rather than a clean character reference, or is cropped, posed, poorly lit, carrying items, or otherwise unsuitable as direct 3D input. The generated image may change details of the original and incurs image-generation billing.
+   - **DIRECT:** Set `"referenceImageMode": "DIRECT"` in the job to pass the uploaded image unchanged to 3D generation. Use it when the user wants to preserve that image and it already shows one unobstructed, full-body character facing forward in a neutral A- or T-pose, with visible separated limbs, even lighting, a simple background, and no held objects. Side views, action poses, cropped limbs, overlapping parts, harsh shadows, or props can make the mesh or rig unreliable. DIRECT skips image-generation billing but still incurs character-generation billing and supports only one final character for that job.
+
+   Use the same batch → list → character sequence as text generation. Do not send a local file path or arbitrary image URL in place of `mediaID`.
 
 ## Legacy single-character generation
 
