@@ -137,8 +137,10 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 | `search_motions` | Search the motion library by text, category, or tags. |
 | `list_characters` | Find accessible character IDs and assets. |
 | `get_character` | Poll character generation or auto-rigging and retrieve assets for the exact requested ID. |
-| `prepare_character_generation` | Prepare a character from a text prompt or uploaded image. **Consumes credits.** |
-| `submit_character_generation` | Start generation using the prepared job ID; returns a character ID for polling. |
+| `generate_character_batch` | Submit text and/or uploaded-image character jobs asynchronously. **Consumes credits.** |
+| `list_batch_characters` | Page through a character batch's results and individual failures. |
+| `prepare_character_generation` | **Legacy:** prepare one character from text or an uploaded image. **Consumes credits.** |
+| `submit_character_generation` | **Legacy:** submit a character prepared by the preceding tool. |
 | `create_character_upload` | Prepare signed model/config/optional thumbnail upload slots. |
 | `submit_character_upload` | Auto-rig an uploaded mesh or detect an existing rig after bytes are uploaded. |
 | `list_scenes` | Browse scenes. |
@@ -170,13 +172,15 @@ Or:
 > Upload this GLB, auto-rig it, download the rigged GLB and config, and inspect the shoulders and knees with a short animation.
 
 ```text
-Text/image: prepare_character_generation → submit_character_generation → get_character
+Text/image: generate_character_batch → get_batch → list_batch_characters → get_character
 Model:     create_character_upload → upload bytes → submit_character_upload → get_character
 ```
 
-For a reference image, first use `create_media_upload` and upload the PNG, JPG, JPEG or WebP bytes. Preparation accepts exactly one `prompt` or `mediaID` and consumes credits. A model upload needs no config to start: the API auto-rigs unrigged meshes and detects existing rigs. The client handles file bytes with the [bundled upload helper](examples/characters/README.md).
+The older `prepare_character_generation` → `submit_character_generation` tools remain available for existing prepared jobs and clients that require the single-character flow. Use the batch flow for new work.
 
-Wait for `uploadStatus: "COMPLETE"` and actual deliverables. **For uploaded models, use `baseFbxURL` or `baseGlbURL` for the rigged result; `characterFileURL` may still be the original unrigged mesh.** Generation's `3D_CONVERT_COMPLETE` is not rig completion. Failed or validation-required jobs need inspection, not automatic resubmission.
+For a reference image, first use `create_media_upload` and upload the PNG, JPG, JPEG or WebP bytes. Each batch job accepts exactly one `prompt` or `mediaID`; mixed batches are supported. `INSPIRATION` generates a new image from a reference, while `DIRECT` uses it unchanged. Batch submission returns a `batchID` and `idempotencyKey`; poll the batch rather than submitting another request. A model upload needs no config to start: the API auto-rigs unrigged meshes and detects existing rigs. The client handles file bytes with the [bundled upload helper](examples/characters/README.md).
+
+List every character in the batch, then wait for `uploadStatus: "COMPLETE"` and actual deliverables on each one. **For uploaded models, use `baseFbxURL` or `baseGlbURL` for the rigged result; `characterFileURL` may still be the original unrigged mesh.** Generation's `3D_CONVERT_COMPLETE` is not rig completion. Failed or validation-required jobs need inspection, not automatic resubmission.
 
 The [complete character workflow](src/workflows/characters.md) covers optional configs, processing states, timeout recovery, downloads and reuse with swing-edit. Review the resulting rig with a short animation before building a full scene. Auto-rigging does not promise facial blendshapes or conversion to MHR.
 
@@ -220,7 +224,7 @@ Edits are asynchronous and consume credits. Submit once and poll the existing jo
 
 Contacts are kinematic estimates. Authored signal/VFX timing is separate. Selected cycles, transitions, masks and character retargets still need visual review; switching to swing-edit is not a general repair for every motion/character combination. The [audit](examples/game/AUDIT.md) records the changes and limits.
 
-See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **30 tools and five workflows**.
+See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **32 tools and five workflows**.
 
 ## Comic 4: video to editable 3D
 
@@ -284,7 +288,7 @@ See [the Blender guide](examples/blender/README.md) for source files, rendering 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes 30 explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes 32 explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
 - `analyze_motion` reads bounded BVH assets only from approved Cartwheel production storage. API keys are never sent to asset storage. The optional game server is a separate loopback-only process without an API proxy.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.

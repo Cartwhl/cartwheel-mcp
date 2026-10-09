@@ -4,23 +4,17 @@ Use this workflow to generate a new character from text or an image, or to impor
 
 ## Generate from text
 
-1. Call `prepare_character_generation` with exactly one `prompt` or `mediaID`. For example:
+1. Call `generate_character_batch` once with one or more jobs. Each job contains a `prompt` or an uploaded `mediaID`, never both. For example:
 
    ```json
-   { "prompt": "A friendly humanoid forest courier, quilted green jacket, leather boots, expressive face, stylized animation character" }
+   { "batchName": "Forest couriers", "jobs": [
+     { "prompt": "A friendly humanoid forest courier, quilted green jacket, leather boots, expressive face, stylized animation character", "characterName": "Courier" }
+   ] }
    ```
 
-   **Preparation consumes character-generation credits.** Save the returned `jobID` privately. Preparation creates a description for the next step; it does not return a reviewable image or a finished mesh. Do not repeat preparation to check status.
+   Image preparation and character generation consume credits. The response contains a `batchID`, not a character ID. The server also returns the submission's `idempotencyKey`. Preserve both; reuse that key with the exact same request body only if submission acceptance was uncertain. Never resubmit simply to check progress.
 
-2. Call `submit_character_generation` once:
-
-   ```json
-   { "jobID": "REPLACE_WITH_PREPARED_JOB_ID", "characterName": "Forest Courier" }
-   ```
-
-   The prepared prompt or reference image determines appearance. The optional `prompt` on submission is display metadata, not a new generation instruction. Set the name at submission: the preparation endpoint does not apply a character name.
-
-3. Save the returned `characterID` (the same identifier as the prepared `jobID`). Poll `get_character` with that ID. Follow the status guidance below, then download the completed `characterFileURL` and available `configURL` / `thumbnailURL` using the client's file tools.
+2. Poll `get_batch` with the returned `batchID` until it reaches a final status. Then page through `list_batch_characters` using `nextToken`. Inspect every row: one image or character can fail while others complete. Use each returned `characterID` with `get_character` until `uploadStatus` is `COMPLETE` or a failure state. Download the completed `characterFbxURL` for a rigged FBX or `characterFileURL` for its preview model, plus available `configURL` / `thumbnailURL`, using the client's file tools.
 
 ## Generate from a reference image
 
@@ -41,7 +35,11 @@ Use this workflow to generate a new character from text or an image, or to impor
 
    Use the exact returned media ID. The helper permits signed Cartwheel production storage only, rejects redirects, and sends no project API key to storage.
 
-3. Call `prepare_character_generation` with `{ "mediaID": "media-REPLACE_ME" }`, omitting `prompt`. Then use the same submit → poll → download sequence as text generation. Do not send a local file path or an arbitrary image URL in place of `mediaID`.
+3. Call `generate_character_batch` with `{ "jobs": [{ "mediaID": "media-REPLACE_ME" }] }`, omitting `prompt` from that job. The default `INSPIRATION` mode generates a new image from the reference. Set `referenceImageMode: "DIRECT"` to use the uploaded image unchanged, without image-generation billing; DIRECT supports only one character for that job. You may mix text and image jobs in one batch, with up to 25 final characters total. Use the same batch → list → character sequence as text generation. Do not send a local file path or arbitrary image URL in place of `mediaID`.
+
+## Legacy single-character generation
+
+`prepare_character_generation` and `submit_character_generation` remain available for existing prepared `jobID`s and clients that require the older flow. Prefer `generate_character_batch` for new work. Legacy preparation accepts exactly one `prompt` or uploaded `mediaID`, consumes credits, and returns a `jobID`. Pass that ID once to `submit_character_generation`, then poll `get_character` using the same ID. The optional submit `prompt` is display metadata; it does not change the prepared appearance. Both legacy calls may take several minutes and are never retried automatically after an uncertain result.
 
 ## Upload and auto-rig a model
 
@@ -73,14 +71,15 @@ Use this workflow to generate a new character from text or an image, or to impor
 | Response | Next action |
 | --- | --- |
 | `PENDING` after slot creation | Finish the bytes upload, then submit. |
-| `PENDING`, `AUTORIGGING_IN_PROGRESS`, or `RETARGETING_IN_PROGRESS` after submission | Poll `get_character`, respecting `estimatedSecondsWaitTime` as an estimate. Use the client's wait tools between checks. |
+| Character batch is `VALIDATING` or `IN_PROGRESS` | Poll `get_batch`, respecting `estimatedSecondsWaitTime` as an estimate. Then use `list_batch_characters` to inspect individual outcomes. |
+| `PENDING`, `AUTORIGGING_IN_PROGRESS`, or `RETARGETING_IN_PROGRESS` after submission | Poll `get_character` for each listed character. Use the client's wait tools between checks. |
 | Generated character is `QUEUED` or `3D_CONVERT_*` | Continue checking both `generatedStatus` and `uploadStatus`. `3D_CONVERT_COMPLETE` does not mean the rig is ready. |
 | `uploadStatus: COMPLETE` | Confirm the exact character ID and usable output files, then review the rig. |
 | `FAILED`, `ADJUSTMENT_FAILED`, or `generatedStatus: 3D_CONVERT_FAILED` | Stop polling and inspect the failed character in Cartwheel. Do not create or submit another paid job automatically. |
 | `NEEDS_VALIDATION` | Inspect and resolve the rig or mapping in Cartwheel. The MCP does not provide a marker/mapping validation UI. |
-| Timeout or disconnected submission | The operation may still be running. Preserve the job/character ID and inspect status. For generation, the prepared job ID is the character ID, but it may not be visible until submission finishes its image step. Absence immediately after a timeout is not proof of failure. |
+| Timeout or disconnected batch submission | The batch may have been accepted. If a `batchID` was returned, poll it. Otherwise preserve the returned `idempotencyKey` and retry only the exact same request with that key after an uncertain response. Do not generate a new key for the retry. |
 
-Character preparation and submission include model work before returning; allow up to four minutes for each MCP request. Generation then continues asynchronously. Preparation timeouts may consume credits without returning a recoverable preparation ID. The server never automatically retries. It also rejects a `get_character` response whose `characterID` differs from the requested ID.
+Batch submission returns before image preparation and character generation finish. The server never automatically retries. `get_batch` can be `COMPLETED` when some individual characters failed, so always inspect all pages of `list_batch_characters`. `get_character` rejects a response whose `characterID` differs from the requested ID.
 
 The upload helper caps model files at 1 GiB, reference images and thumbnails at 50 MiB, and configs at 16 MiB. These are local helper limits, not promises about service capacity. It uploads one chosen file per invocation and prints only the asset ID, kind, byte count and success flag. Keep source files, upload responses and signed URLs private.
 

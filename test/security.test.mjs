@@ -9,8 +9,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 test('the public tool surface cannot change accounts, callbacks, or arbitrary routes', () => {
-  assert.equal(definitions.length, 30);
-  assert.deepEqual(definitions.filter(t => !t.annotations.readOnlyHint).map(t => t.name), ['generate_motion','create_media_upload','generate_motion_from_video','create_scene','loop_motion','stitch_motions','edit_motion','edit_key_poses','apply_motion_edit','set_scene_character','save_key_poses','export_scene','prepare_character_generation','submit_character_generation','create_character_upload','submit_character_upload']);
+  assert.equal(definitions.length, 32);
+  assert.deepEqual(definitions.filter(t => !t.annotations.readOnlyHint).map(t => t.name), ['generate_motion','create_media_upload','generate_motion_from_video','create_scene','loop_motion','stitch_motions','edit_motion','edit_key_poses','apply_motion_edit','set_scene_character','save_key_poses','export_scene','generate_character_batch','prepare_character_generation','submit_character_generation','create_character_upload','submit_character_upload']);
   for (const tool of definitions) {
     if (tool.handler) assert.equal(tool.handler, 'analyze_motion');
     else { assert.ok(tool.path.startsWith('/')); assert.ok(['GET', 'POST', 'PUT'].includes(tool.method)); }
