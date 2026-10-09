@@ -89,7 +89,7 @@ test('character workflow is discoverable and covers creation, auto-rigging and t
   const client = await connect(t);
   assert.match(client.getInstructions(), /create_rigged_character/);
   const guide = (await client.readResource({ uri: characterWorkflowUri })).contents[0].text;
-  for (const term of ['prepare_character_generation', 'submit_character_generation', 'create_character_upload', 'submit_character_upload', 'mediaID', 'baseFbxURL', 'baseGlbURL', 'characterFileURL', 'NEEDS_VALIDATION', '3D_CONVERT_COMPLETE', 'consumes character-generation credits', 'set_scene_character']) assert.ok(guide.includes(term), term);
+  for (const term of ['generate_character_batch', 'get_batch', 'list_batch_characters', 'Legacy single-character generation', 'prepare_character_generation', 'submit_character_generation', 'create_character_upload', 'submit_character_upload', 'mediaID', 'baseFbxURL', 'baseGlbURL', 'characterFileURL', 'NEEDS_VALIDATION', '3D_CONVERT_COMPLETE', 'credits', 'set_scene_character']) assert.ok(guide.includes(term), term);
   const directory = guide.match(/Installed example directory: (.+)/)[1];
   for (const file of ['upload-asset.mjs', 'README.md']) await access(`${directory}/${file}`);
   const prompt = await client.getPrompt({ name: characterWorkflowPrompt, arguments: { character: 'A forest courier from an uploaded GLB' } });

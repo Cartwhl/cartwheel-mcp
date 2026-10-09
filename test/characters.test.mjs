@@ -26,44 +26,44 @@ async function fixture(t, name, bytes = Buffer.from('selected asset bytes')) {
   return path;
 }
 
-test('character generation follows prepare, submit, and both processing statuses without another generation', async t => {
+test('character batch submits once, then polls the batch and its individual characters', async t => {
   const calls = [];
-  const statuses = [
-    { uploadStatus: 'PENDING', generatedStatus: '3D_CONVERT_QUEUED' },
-    { uploadStatus: 'AUTORIGGING_IN_PROGRESS', generatedStatus: '3D_CONVERT_COMPLETE' },
-    { uploadStatus: 'COMPLETE', generatedStatus: '3D_CONVERT_COMPLETE', characterFileURL: assetURL('generated.fbx'), configURL: assetURL('config.json') },
-  ];
   const prompt = 'A friendly humanoid forest courier with a quilted jacket';
   const client = await connect(t, async (url, options) => {
     calls.push(url.pathname);
     assert.equal(url.origin, 'https://external-mogen.api.getcartwheel.com');
     assert.equal(options.headers['x-api-key'], 'private-project-key');
     assert.equal(options.redirect, 'error');
-    if (url.pathname === '/characters/generate/prepare') {
+    if (url.pathname === '/characters/generate/batch') {
       assert.equal(options.method, 'POST');
-      assert.deepEqual(JSON.parse(options.body), { prompt });
-      return Response.json({ jobID: 'character-gen-courier' });
+      assert.equal(options.headers['Idempotency-Key'], 'courier-request');
+      assert.deepEqual(JSON.parse(options.body), { batchName: 'Couriers', jobs: [{ prompt, characterName: 'Courier' }] });
+      return Response.json({ batchID: 'batch-character-courier', status: 'VALIDATING' }, { status: 202 });
     }
-    if (url.pathname === '/characters/generate/submit') {
-      assert.deepEqual(JSON.parse(options.body), { jobID: 'character-gen-courier', characterName: 'Courier' });
-      return Response.json({ characterID: 'character-gen-courier', uploadStatus: 'PENDING' }, { status: 202 });
+    if (url.pathname === '/batch/batch-character-courier') {
+      assert.equal(options.method, 'GET');
+      return Response.json({ batchID: 'batch-character-courier', status: 'COMPLETED', numSucceededJobs: 1, numFailedJobs: 0 });
     }
-    assert.equal(url.pathname, '/characters/character-gen-courier');
-    assert.equal(options.method, 'GET');
-    return Response.json({ characterID: 'character-gen-courier', ...statuses.shift() });
+    if (url.pathname === '/characters/batches/batch-character-courier') {
+      assert.equal(options.method, 'GET');
+      return Response.json({ items: [{ characterID: 'char-generation-courier', uploadStatus: 'AUTORIGGING_IN_PROGRESS', generatedStatus: '3D_CONVERT_COMPLETE' }] });
+    }
+    assert.equal(url.pathname, '/characters/char-generation-courier');
+    return Response.json({ characterID: 'char-generation-courier', uploadStatus: 'COMPLETE', characterFbxURL: assetURL('generated.fbx'), characterFileURL: assetURL('generated.glb') });
   });
-  const { jobID } = unpack(await client.callTool({ name: 'prepare_character_generation', arguments: { prompt } }));
-  const { characterID } = unpack(await client.callTool({ name: 'submit_character_generation', arguments: { jobID, characterName: 'Courier' } }));
-  const results = [];
-  for (let i = 0; i < 3; i++) results.push(unpack(await client.callTool({ name: 'get_character', arguments: { characterID } })));
-  assert.equal(results[1].generatedStatus, '3D_CONVERT_COMPLETE');
-  assert.equal(results[1].uploadStatus, 'AUTORIGGING_IN_PROGRESS');
-  assert.equal(results[2].characterFileURL, assetURL('generated.fbx'));
-  assert.deepEqual(calls.slice(0, 2), ['/characters/generate/prepare', '/characters/generate/submit']);
-  assert.equal(calls.length, 5);
+  const batch = unpack(await client.callTool({ name: 'generate_character_batch', arguments: { batchName: 'Couriers', jobs: [{ prompt, characterName: 'Courier' }], idempotencyKey: 'courier-request' } }));
+  assert.equal(batch.batchID, 'batch-character-courier');
+  assert.equal(batch.idempotencyKey, 'courier-request');
+  assert.equal(unpack(await client.callTool({ name: 'get_batch', arguments: { batchID: batch.batchID } })).status, 'COMPLETED');
+  const listed = unpack(await client.callTool({ name: 'list_batch_characters', arguments: { batchID: batch.batchID } }));
+  assert.equal(listed.items[0].uploadStatus, 'AUTORIGGING_IN_PROGRESS');
+  assert.equal(listed.items[0].generatedStatus, '3D_CONVERT_COMPLETE');
+  const character = unpack(await client.callTool({ name: 'get_character', arguments: { characterID: listed.items[0].characterID } }));
+  assert.equal(character.characterFbxURL, assetURL('generated.fbx'));
+  assert.deepEqual(calls, ['/characters/generate/batch', '/batch/batch-character-courier', '/characters/batches/batch-character-courier', '/characters/char-generation-courier']);
 });
 
-test('image-reference creation uploads the selected media bytes before preparation', async t => {
+test('image-reference batch uploads bytes first and sends DIRECT and INSPIRATION modes', async t => {
   const filePath = await fixture(t, 'reference.webp');
   const slot = { mediaID: 'media-reference', extension: 'webp', mediaUploadURL: assetURL('reference.webp') };
   let uploaded = false;
@@ -73,9 +73,13 @@ test('image-reference creation uploads the selected media bytes before preparati
       return Response.json({ mediaUploads: [slot] });
     }
     assert.ok(uploaded);
-    assert.equal(url.pathname, '/characters/generate/prepare');
-    assert.deepEqual(JSON.parse(options.body), { mediaID: slot.mediaID });
-    return Response.json({ jobID: 'character-gen-from-image' });
+    assert.equal(url.pathname, '/characters/generate/batch');
+    assert.deepEqual(JSON.parse(options.body), { jobs: [
+      { mediaID: slot.mediaID, referenceImageMode: 'DIRECT' },
+      { mediaID: slot.mediaID, referenceImageMode: 'INSPIRATION' },
+    ] });
+    assert.ok(options.headers['Idempotency-Key']);
+    return Response.json({ batchID: 'batch-character-from-image' }, { status: 202 });
   });
   const response = unpack(await client.callTool({ name: 'create_media_upload', arguments: { media: [{ extension: 'webp', name: 'Courier reference' }] } }));
   await uploadAsset({ kind: 'image', filePath, upload: response.mediaUploads[0], fetchImpl: async (url, options) => {
@@ -87,7 +91,54 @@ test('image-reference creation uploads the selected media bytes before preparati
     uploaded = true;
     return new Response(null, { status: 200 });
   } });
-  assert.equal(unpack(await client.callTool({ name: 'prepare_character_generation', arguments: { mediaID: slot.mediaID } })).jobID, 'character-gen-from-image');
+  assert.equal(unpack(await client.callTool({ name: 'generate_character_batch', arguments: { jobs: [
+    { mediaID: slot.mediaID, referenceImageMode: 'DIRECT' },
+    { mediaID: slot.mediaID, referenceImageMode: 'INSPIRATION' },
+  ] } })).batchID, 'batch-character-from-image');
+});
+
+test('a mixed batch exposes partial character failures and paginated results', async t => {
+  const client = await connect(t, async (url, options) => {
+    if (url.pathname === '/characters/generate/batch') {
+      assert.deepEqual(JSON.parse(options.body).jobs, [{ prompt: 'A robot' }, { mediaID: 'media-reference' }]);
+      return Response.json({ batchID: 'batch-character-mixed' }, { status: 202 });
+    }
+    assert.equal(url.pathname, '/characters/batches/batch-character-mixed');
+    if (!url.searchParams.has('nextToken')) return Response.json({ items: [{ characterID: 'char-generation-one', uploadStatus: 'COMPLETE' }], nextToken: 'next-page' });
+    assert.equal(url.searchParams.get('nextToken'), 'next-page');
+    assert.equal(url.searchParams.get('limit'), '1');
+    return Response.json({ items: [{ characterID: 'char-generation-two', uploadStatus: 'FAILED', errorMessage: 'Unable to generate image.' }] });
+  });
+  const { batchID } = unpack(await client.callTool({ name: 'generate_character_batch', arguments: { jobs: [{ prompt: 'A robot' }, { mediaID: 'media-reference' }] } }));
+  const first = unpack(await client.callTool({ name: 'list_batch_characters', arguments: { batchID, limit: 1 } }));
+  const second = unpack(await client.callTool({ name: 'list_batch_characters', arguments: { batchID, limit: 1, nextToken: first.nextToken } }));
+  assert.equal(first.items[0].uploadStatus, 'COMPLETE');
+  assert.equal(second.items[0].uploadStatus, 'FAILED');
+  assert.equal(second.items[0].errorMessage, 'Unable to generate image.');
+});
+
+test('legacy prepare and submit tools remain discoverable and use their original routes', async t => {
+  const calls = [];
+  const client = await connect(t, async (url, options) => {
+    calls.push(url.pathname);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(options.signal.aborted, false);
+    if (url.pathname === '/characters/generate/prepare') {
+      assert.deepEqual(JSON.parse(options.body), { prompt: 'A courier' });
+      return Response.json({ jobID: 'char-generation-legacy' });
+    }
+    assert.equal(url.pathname, '/characters/generate/submit');
+    assert.deepEqual(JSON.parse(options.body), { jobID: 'char-generation-legacy', characterName: 'Courier' });
+    return Response.json({ characterID: 'char-generation-legacy', uploadStatus: 'PENDING' }, { status: 202 });
+  }, { timeoutMs: 1 });
+  const tools = (await client.listTools()).tools;
+  for (const name of ['prepare_character_generation', 'submit_character_generation']) {
+    assert.match(tools.find(tool => tool.name === name).description, /^LEGACY/);
+  }
+  const { jobID } = unpack(await client.callTool({ name: 'prepare_character_generation', arguments: { prompt: 'A courier' } }));
+  const submitted = unpack(await client.callTool({ name: 'submit_character_generation', arguments: { jobID, characterName: 'Courier' } }));
+  assert.equal(submitted.characterID, jobID);
+  assert.deepEqual(calls, ['/characters/generate/prepare', '/characters/generate/submit']);
 });
 
 test('auto-rigging needs model bytes but no config, and preserves native rigged deliverables', async t => {
@@ -129,15 +180,20 @@ test('auto-rigging needs model bytes but no config, and preserves native rigged 
 test('character requests reject ambiguous inputs, unsupported formats and identity or storage overrides before transmission', async t => {
   const client = await connect(t, async () => assert.fail('Invalid input must not reach the API'));
   for (const [name, args] of [
-    ['prepare_character_generation', {}],
-    ['prepare_character_generation', { prompt: 'A courier', mediaID: 'media-1' }],
-    ['prepare_character_generation', { prompt: ' \n ' }],
-    ['prepare_character_generation', { prompt: 'a'.repeat(4001) }],
-    ['prepare_character_generation', { mediaID: 'https://other.example/reference.png' }],
-    ['prepare_character_generation', { prompt: 'A courier', characterName: 'Ignored upstream' }],
-    ['prepare_character_generation', { prompt: 'A courier', createdByUser: 'other' }],
-    ['submit_character_generation', { jobID: 'job-1', callbackURL: 'https://other.example' }],
-    ['submit_character_generation', { jobID: '../other' }],
+    ['generate_character_batch', {}],
+    ['generate_character_batch', { jobs: [] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier', mediaID: 'media-1' }] }],
+    ['generate_character_batch', { jobs: [{ prompt: ' \n ' }] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'a'.repeat(4001) }] }],
+    ['generate_character_batch', { jobs: [{ mediaID: 'https://other.example/reference.png' }] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier', numVariations: 26 }] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier', numVariations: 20 }, { prompt: 'A dancer', numVariations: 6 }] }],
+    ['generate_character_batch', { jobs: [{ mediaID: 'media-1', referenceImageMode: 'DIRECT', numVariations: 2 }] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier', referenceImageMode: 'DIRECT' }] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier' }], createdByUser: 'other' }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier' }], subscribers: ['other@example.com'] }],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier' }], callbackURL: 'https://other.example' }],
+    ['list_batch_characters', { batchID: '../other' }],
     ['create_character_upload', { fileExtension: 'zip' }],
     ['create_character_upload', { fileExtension: 'glb', thumbnailExtension: 'exe' }],
     ['create_character_upload', { fileExtension: 'glb', characterName: 'a'.repeat(201) }],
@@ -167,8 +223,7 @@ test('ambiguous character mutations never retry or leak diagnostics and give ope
   let count = 0;
   const client = await connect(t, async () => { count++; throw new Error('private-project-key signed-url-secret'); });
   const cases = [
-    ['prepare_character_generation', { prompt: 'A courier' }, /consumed credits/],
-    ['submit_character_generation', { jobID: 'character-gen-courier' }, /prepared jobID as characterID/],
+    ['generate_character_batch', { jobs: [{ prompt: 'A courier' }], idempotencyKey: 'retry-courier' }, /same idempotencyKey/],
     ['create_character_upload', { fileExtension: 'fbx' }, /slot may have been created/],
     ['submit_character_upload', { characterID: 'char-upload-courier' }, /get_character/],
   ];
@@ -177,19 +232,30 @@ test('ambiguous character mutations never retry or leak diagnostics and give ope
     assert.equal(response.isError, true);
     assert.match(unpack(response).guidance, guidance);
     assert.doesNotMatch(JSON.stringify(response), /private-project-key|signed-url-secret/);
+    if (name === 'generate_character_batch') assert.equal(unpack(response).idempotencyKey, 'retry-courier');
   }
   assert.equal(count, cases.length);
 });
 
-test('character preparation and submission allow synchronous model work beyond the normal request timeout', async t => {
+test('an uncertain batch submission returns a reusable key and never resubmits automatically', async t => {
+  let count = 0;
+  const requests = [];
   const client = await connect(t, async (_url, options) => {
-    await new Promise(resolve => setTimeout(resolve, 10));
-    assert.equal(options.signal.aborted, false);
-    return Response.json({ jobID: 'character-gen-courier' });
-  }, { timeoutMs: 1 });
-  for (const [name, args] of [['prepare_character_generation', { prompt: 'A courier' }], ['submit_character_generation', { jobID: 'character-gen-courier' }]]) {
-    assert.equal((await client.callTool({ name, arguments: args })).isError, false);
-  }
+    count++;
+    requests.push({ key: options.headers['Idempotency-Key'], body: options.body });
+    if (count === 1) throw new Error('connection closed after dispatch');
+    return Response.json({ batchID: 'batch-character-courier' }, { status: 202 });
+  });
+  const jobs = [{ prompt: 'A courier' }];
+  const response = await client.callTool({ name: 'generate_character_batch', arguments: { jobs } });
+  assert.equal(response.isError, true);
+  const { idempotencyKey } = unpack(response);
+  assert.equal(idempotencyKey, requests[0].key);
+  assert.equal(count, 1);
+  const replay = unpack(await client.callTool({ name: 'generate_character_batch', arguments: { jobs, idempotencyKey } }));
+  assert.equal(replay.batchID, 'batch-character-courier');
+  assert.equal(replay.idempotencyKey, idempotencyKey);
+  assert.deepEqual(requests[1], requests[0]);
 });
 
 test('model, MJCF bundle, saved config and thumbnail uploads stream to their specific slots without credentials', async t => {

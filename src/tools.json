@@ -51,7 +51,7 @@
     "name": "get_character",
     "method": "GET",
     "path": "/characters/{characterID}",
-    "description": "Retrieve the exact character ID, processing status, and signed assets. Poll after submit_character_upload or submit_character_generation. Wait for uploadStatus COMPLETE and usable deliverables; generatedStatus 3D_CONVERT_COMPLETE alone is not rig completion. Stop on FAILED, ADJUSTMENT_FAILED, 3D_CONVERT_FAILED, or NEEDS_VALIDATION and inspect in Cartwheel. For uploaded models, baseFbxURL/baseGlbURL are the rigged result; characterFileURL may be the original unrigged mesh. For generated characters use characterFileURL. Estimated wait times are advisory. Returned IDs are checked to reject default-character substitution.",
+    "description": "Retrieve the exact character ID, processing status, and signed assets. Poll after submit_character_upload or after finding a generated character in list_batch_characters. Wait for uploadStatus COMPLETE and usable deliverables; generatedStatus 3D_CONVERT_COMPLETE alone is not rig completion. Stop on FAILED, ADJUSTMENT_FAILED, 3D_CONVERT_FAILED, or NEEDS_VALIDATION and inspect in Cartwheel. For uploaded models, baseFbxURL/baseGlbURL are the rigged result; characterFileURL may be the original unrigged mesh. For generated characters use characterFbxURL for FBX or characterFileURL for the preview model. Estimated wait times are advisory. Returned IDs are checked to reject default-character substitution.",
     "parameters": [
       {
         "name": "characterID",
@@ -883,7 +883,7 @@
     "name": "get_batch",
     "method": "GET",
     "path": "/batch/{batchID}",
-    "description": "Retrieves batch details including status, progress, and export settings.\nUse this endpoint to check the status of a batch job created via /motion/fromVideo or /motion/fromText.",
+    "description": "Retrieves batch details including status and progress. Use for motion batches and character batches created by generate_character_batch. For character batches, follow with list_batch_characters to inspect every individual outcome.",
     "parameters": [
       {
         "name": "batchID",
@@ -915,7 +915,7 @@
     "name": "create_media_upload",
     "method": "POST",
     "path": "/media/upload",
-    "description": "Prepare signed upload URLs for video or character-reference images. This creates media slots; it does not upload bytes. The client PUTs each selected file to its returned mediaUploadURL without an API key header, then calls generate_motion_from_video or prepare_character_generation. Images: png, jpg, jpeg, webp. Videos: at most 30 seconds and smaller than 250 MB. Keep signed URLs private.",
+    "description": "Prepare signed upload URLs for video or character-reference images. This creates media slots; it does not upload bytes. The client PUTs each selected file to its returned mediaUploadURL without an API key header, then calls generate_motion_from_video or generate_character_batch (or legacy prepare_character_generation). Images: png, jpg, jpeg, webp. Videos: at most 30 seconds and smaller than 250 MB. Keep signed URLs private.",
     "parameters": [],
     "inputSchema": {
       "type": "object",

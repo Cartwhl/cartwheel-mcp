@@ -5,15 +5,15 @@ Use the MCP prompt **`create_rigged_character`** (optional `character` descripti
 Text generation:
 
 ```text
-prepare_character_generation(prompt) → submit_character_generation(jobID, characterName)
-  → get_character(characterID) → completed characterFileURL
+generate_character_batch(jobs: [{ prompt, characterName }]) → get_batch(batchID)
+  → list_batch_characters(batchID) → get_character(characterID) → completed characterFbxURL
 ```
 
 Image generation:
 
 ```text
-create_media_upload → upload image bytes → prepare_character_generation(mediaID)
-  → submit_character_generation(jobID, characterName) → get_character(characterID)
+create_media_upload → upload image bytes → generate_character_batch(jobs: [{ mediaID }])
+  → get_batch(batchID) → list_batch_characters(batchID) → get_character(characterID)
 ```
 
 Model upload and auto-rigging:
@@ -24,7 +24,9 @@ create_character_upload → upload model bytes (optional saved config and thumbn
   → completed baseFbxURL / baseGlbURL + configURL
 ```
 
-Preparation consumes character-generation credits. Submit each job once and poll its returned ID. Wait for `uploadStatus: "COMPLETE"` and usable assets. `generatedStatus: "3D_CONVERT_COMPLETE"` alone is not rig completion. For uploaded models, `characterFileURL` may be the original unrigged file; use the rigged `baseFbxURL` or `baseGlbURL`.
+Batch generation consumes credits. Submit a batch once, poll its ID, and inspect every returned character; individual jobs may fail. The response includes an `idempotencyKey` for an uncertain submission retry with exactly the same body. Wait for `uploadStatus: "COMPLETE"` and usable assets. `generatedStatus: "3D_CONVERT_COMPLETE"` alone is not rig completion. For uploaded models, `characterFileURL` may be the original unrigged file; use the rigged `baseFbxURL` or `baseGlbURL`.
+
+For an existing prepared `jobID` or a client that requires the older single-character flow, the **legacy** tools remain available: `prepare_character_generation` → `submit_character_generation` → `get_character`. Prefer batch generation for new characters.
 
 ## Upload helper
 
