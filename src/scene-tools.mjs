@@ -6,7 +6,9 @@ const referenceName = id('Exact existing object reference from get_scene.');
 const references = { type: 'array', items: referenceName, minItems: 1, maxItems: 32, uniqueItems: true };
 const axis = { enum: ['X', 'Y', 'Z', '-X', '-Y', '-Z'] };
 const exportSettings = object({
-  exportType: { enum: ['bvh', 'glb', 'fbx-blender', 'fbx-maya', 'fbx-unreal', 'fbx-roblox'] },
+  exportType: { enum: ['bvh', 'glb', 'fbx-blender', 'fbx-maya', 'fbx-unreal', 'fbx-roblox',
+    'fbx-unity', 'usd', 'usdz', 'ma', 'mb', 'qpos'],
+    description: 'qpos is the MuJoCo joint vector and is accepted only for robot (mjcf) characters; every other type works on any character.' },
   forward: axis, up: axis,
   frameRate: { enum: [2, 12, 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 90, 100, 120, 144, 240] },
   frameStepSize: { type: 'integer', minimum: 1, maximum: 10 },
@@ -25,7 +27,7 @@ export const sceneDefinitions = [
     'Save swing-edit editor pose state without running generation. Replaces this slot’s complete saved pose list; an empty list clears it. Inspect get_scene to read back the saved state. This does not apply or regenerate animation.',
     { sceneID, referenceName, timelineIndex: { type: 'integer', minimum: 0, maximum: 1000 }, keyPoses: { type: 'array', items: keyPose, minItems: 0, maxItems: 300 } }, ['sceneID', 'referenceName', 'timelineIndex', 'keyPoses'], ['sceneID', 'referenceName', 'timelineIndex'].map(name => parameter(name)), true),
   tool('export_scene', 'POST', '/exports/scenes/{sceneID}',
-    'Export the current scene performances, including reviewed and applied swing-edit edits, on each scene object’s character. Choose characters before exporting. Runs export processing; submit once, then poll get_scene_exports. An unapplied edit is not included. Keep moveInPlace false while measuring travel.',
+    'Export the current scene performances, including reviewed and applied swing-edit edits, on each scene object’s character. Choose characters before exporting. Runs export processing; submit once, then poll get_scene_exports. An unapplied edit is not included. Keep moveInPlace false while measuring travel. Robot (mjcf) characters solve against their physical model, so they take minutes and arrive in metres/Z-up; read cartwheel://workflows/robots first.',
     { sceneID, objectReferenceNamesToExport: references, exportSettings }, ['sceneID', 'exportSettings'], [parameter('sceneID')]),
   tool('get_scene_exports', 'GET', '/exports/scenes/{sceneID}',
     'Read latest scene export status and authorized download URLs. Poll after export_scene; does not start another export. Inspect every requested object’s status before downloading. Signed URLs expire and must remain private.',
