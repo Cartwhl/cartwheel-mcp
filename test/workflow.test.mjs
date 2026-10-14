@@ -101,7 +101,7 @@ test('robot workflow covers identification, qpos and the robot native frame', as
   const client = await connect(t);
   assert.match(client.getInstructions(), /robot_motion_export/);
   const guide = (await client.readResource({ uri: robotWorkflowUri })).contents[0].text;
-  for (const term of ['fileExtension', 'mjcf', 'qpos', 'list_characters', 'set_scene_character', 'export_scene', 'get_scene_exports', 'joint limits', 'metres', 'Z-up']) assert.ok(guide.includes(term), term);
+  for (const term of ['fileExtension', 'mjcf', 'qpos', 'list_characters', 'set_scene_character', 'export_scene', 'get_scene_exports', 'joint limits', 'metres', 'Z-up', 'Blender, Maya, Unreal and Unity cannot open it']) assert.ok(guide.includes(term), term);
   // The rule has to be the uploaded format, never the served one or a hardcoded ID.
   assert.ok(guide.includes('Do not hardcode robot IDs'), 'no hardcoded IDs');
   const directory = guide.match(/Installed example directory: (.+)/)[1];

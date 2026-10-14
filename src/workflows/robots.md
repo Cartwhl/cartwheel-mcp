@@ -1,6 +1,6 @@
 # Humanoid robot retarget and export
 
-Use this workflow when the user asks for motion on a physical robot (Unitree G1, Apptronik Apollo, Unitree H1, Rainbow RB-Y1, ToddlerBot) or asks for joint angles to replay in MuJoCo. Robots travel the same scene and export path as any other character; what differs is how you find them, which formats mean anything, the frame the deliverables arrive in, and how long the export takes.
+Use this workflow when the user asks for motion on a physical robot (Unitree G1, Apptronik Apollo, Unitree H1, Rainbow RB-Y1, ToddlerBot) or asks for joint angles to replay in MuJoCo. Robots use the same scene and export tools as any other character, but not the same retarget: their motion is solved against the robot's own physical model instead of being retargeted onto a humanoid rig. Everything else that differs follows from that, including how you find them, which formats mean anything, the frame the deliverables arrive in, and how long an export takes.
 
 ## Find the robot
 
@@ -19,7 +19,7 @@ Put the robot on a scene object with `set_scene_character`, then `export_scene`,
 
 Choose the format deliberately:
 
-- `qpos` is the MuJoCo joint vector as an `.npz`, and is **robot only**. It is what you want for replaying motion in simulation or on hardware. Requesting it for a non-robot character is rejected with "QPOS export is only available for MJCF-origin robot characters"; check `fileExtension` first rather than relying on the error.
+- `qpos` is the MuJoCo joint vector as an `.npz`, and is **robot only**. It is what you want for replaying motion in simulation or on hardware, and it is not an animation file: no DCC reads it, so Blender, Maya, Unreal and Unity cannot open it. When the user also wants the motion rendered or edited, export a mesh format alongside it rather than offering the `.npz`. Requesting `qpos` for a non-robot character is rejected with "QPOS export is only available for MJCF-origin robot characters"; check `fileExtension` first rather than relying on the error.
 - `bvh`, `glb`, `fbx-*`, `usd`, `usdz`, `ma` and `mb` all work on a robot. Each derives from the solved robot skeleton, so the joint names are the robot's own, not Cartwheel's 22-joint naming. Do not assume a downstream tool expecting a humanoid rig will accept them.
 
 ## Expect the robot's own frame, and a slow export

@@ -2,8 +2,13 @@
 
 See `cartwheel://workflows/robots` (or `src/workflows/robots.md`) for the workflow itself.
 
-Robots are driven through the same scene and export tools as any other character, so the
-Blender and game examples apply unchanged once a `qpos` or mesh deliverable is in hand.
-What is robot specific is covered in the workflow: finding a robot by `fileExtension`,
-choosing between `qpos` and the mesh formats, the native metre/Z-up frame, and the solve's
-longer run time.
+Robots share the scene and export tools with every other character, but not the retarget:
+their motion is solved against the robot's own MJCF model rather than retargeted onto a
+humanoid rig, and that is what makes the deliverables, the coordinate frame and the timings
+differ.
+
+Only the mesh deliverables feed the Blender and game examples: `glb`, `fbx-*`, `usd`,
+`usdz`, `ma`, `mb` and `bvh`. **`qpos` is not one of them.** It is a MuJoCo joint vector in
+an `.npz`, and no DCC reads it: Blender, Maya, Unreal and Unity cannot open it. Use `qpos`
+for simulation or hardware replay, and export a mesh format alongside it when the same
+motion also has to be rendered or edited.
