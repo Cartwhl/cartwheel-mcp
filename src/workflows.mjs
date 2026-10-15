@@ -16,6 +16,8 @@ export const swingEditWorkflowUri = 'cartwheel://workflows/swing-edit';
 export const swingEditWorkflowPrompt = 'swing_edit_motion';
 export const characterWorkflowUri = 'cartwheel://workflows/characters';
 export const characterWorkflowPrompt = 'create_rigged_character';
+export const robotWorkflowUri = 'cartwheel://workflows/robots';
+export const robotWorkflowPrompt = 'robot_motion_export';
 const workflows = [
   { uri: workflowUri, prompt: workflowPrompt, name: 'grounded_blender_workflow',
     title: 'Grounded Cartwheel → Blender',
@@ -37,6 +39,10 @@ const workflows = [
     title: 'Cartwheel → character creation and auto-rigging',
     description: 'Generate a character from text or an image, or upload and auto-rig a model, then retrieve the rigged assets and animate.',
     file: 'characters.md', directory: 'characters', argument: 'character' },
+  { uri: robotWorkflowUri, prompt: robotWorkflowPrompt, name: 'robot_workflow',
+    title: 'Cartwheel → humanoid robot retarget and export',
+    description: 'Find a robot character, solve motion against its physical model, and export qpos joint angles or mesh formats in the robot\'s native frame.',
+    file: 'robots.md', directory: 'robots', argument: 'robot' },
 ].map(w => ({ ...w, text: `${readFileSync(new URL(`./workflows/${w.file}`, import.meta.url), 'utf8')}\nInstalled example directory: ${fileURLToPath(new URL(`../examples/${w.directory}/`, import.meta.url))}\n` }));
 const invalid = message => new McpError(ErrorCode.InvalidParams, message);
 

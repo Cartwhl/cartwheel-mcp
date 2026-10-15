@@ -4,7 +4,7 @@ The existing `@cartwhl/mcp-server` package exposes `@cartwhl/mcp-server/tool-exe
 to both CommonJS `require` and ESM named imports. It has no separate build or release.
 Existing package file subpaths remain available for compatibility.
 
-Exports: `definitions` (all 30 local tools), `toolRequest`, `executeTool`,
+Exports: `definitions` (all 32 local tools), `toolRequest`, `executeTool`,
 `ToolInputError`, `origins`, and the shared `keyPose` schema.
 
 `toolRequest(name, args)` validates catalog schemas and semantic constraints, then

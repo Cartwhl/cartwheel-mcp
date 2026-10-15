@@ -10,7 +10,7 @@ test('stable CJS and ESM executor export shares the local catalog and preserves 
   assert.equal((await import('@cartwhl/mcp-server/src/server.mjs')).definitions, definitions);
   assert.equal(require('@cartwhl/mcp-server/src/tool-executor/index.cjs').definitions, definitions);
   assert.equal(localDefinitions, definitions);
-  assert.equal(definitions.length, 30);
+  assert.equal(definitions.length, 32);
 });
 
 test('executor accepts only explicit fixed origins, with credentials and audit supplied by the caller', async () => {

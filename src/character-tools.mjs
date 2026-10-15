@@ -1,1 +1,1 @@
-export { characterDefinitions } from './tool-executor/character-tools.cjs';
+export { characterDefinitions, validateCharacterBatchArguments } from './tool-executor/character-tools.cjs';

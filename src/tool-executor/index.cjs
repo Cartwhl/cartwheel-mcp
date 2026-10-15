@@ -1,8 +1,9 @@
 const Ajv = require('ajv');
+const { randomUUID } = require('node:crypto');
 const { keyPose } = require('./swing-edit-constraints.cjs');
 const { gameDefinitions, validateGameArguments } = require('./game-tools.cjs');
 const { sceneDefinitions } = require('./scene-tools.cjs');
-const { characterDefinitions } = require('./character-tools.cjs');
+const { characterDefinitions, validateCharacterBatchArguments } = require('./character-tools.cjs');
 const definitions = [...require('./tools.json'), ...gameDefinitions, ...sceneDefinitions, ...characterDefinitions];
 const origins = Object.freeze({ staging: 'https://external-mogen-staging.api.getcartwheel.com', production: 'https://external-mogen.api.getcartwheel.com' });
 const ajv = new Ajv({ strict: false, validateFormats: false });
@@ -15,7 +16,7 @@ function toolRequest(name, args = {}) {
   if (!tool) throw new ToolInputError('Unknown Cartwheel tool');
   const validate = validators.get(name);
   if (!validate(args)) throw new ToolInputError('Invalid tool arguments', validate.errors);
-  try { validateGameArguments(name, args); } catch (error) { throw new ToolInputError(error.message); }
+  try { validateGameArguments(name, args); validateCharacterBatchArguments(name, args); } catch (error) { throw new ToolInputError(error.message); }
   let path = tool.path;
   const parameters = tool.parameters ?? [];
   for (const param of parameters.filter(p => p.location === 'path')) {
@@ -41,6 +42,8 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
   if (!base) throw new Error('Explicit staging or production environment required');
   const request = toolRequest(name, args);
   const { tool, path, body } = request;
+  const idempotencyKey = name === 'generate_character_batch' ? (args.idempotencyKey ?? randomUUID()) : undefined;
+  if (idempotencyKey) delete body.idempotencyKey;
   const limit = longOperations.has(name) ? Math.max(timeoutMs, 240000) : timeoutMs;
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -53,7 +56,7 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     const url = new URL(path, base);
     if (url.origin !== base || !String(path).startsWith('/') || String(path).startsWith('//')) throw new Error('Invalid API target');
     const writing = ['POST', 'PUT'].includes(method);
-    const init = { method, headers: { 'x-api-key': apiKey, Accept: 'application/json', ...(writing ? { 'Content-Type': 'application/json' } : {}) },
+    const init = { method, headers: { 'x-api-key': apiKey, Accept: 'application/json', ...(writing ? { 'Content-Type': 'application/json' } : {}), ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) },
       ...(writing ? { body: JSON.stringify({ ...(body ?? {}), ...(createdByUser ? { createdByUser } : {}) }) } : {}), redirect: 'error', signal: controller.signal };
     if (requestJSON) return requestJSON(url.href, init, Math.max(1, deadline - Date.now()));
     const response = await fetchImpl(url, init);
@@ -88,7 +91,7 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     }
     const response = await api(path, tool.method, body);
     if (name === 'get_character' && response.characterID !== args.characterID) throw new ToolInputError('The API did not return the requested character. No replacement character was accepted. Check the character ID and project access.');
-    return response;
+    return idempotencyKey ? { ...response, idempotencyKey } : response;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
 module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose };

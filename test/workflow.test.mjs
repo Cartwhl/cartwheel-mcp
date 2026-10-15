@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/server.mjs';
-import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt } from '../src/workflows.mjs';
+import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt, robotWorkflowUri, robotWorkflowPrompt } from '../src/workflows.mjs';
 
 async function connect(t) {
   const server = createServer({ apiKey: 'workflow-test-key', fetchImpl: async () => assert.fail('Workflow discovery must not call the API') });
@@ -21,8 +21,8 @@ test('Blender workflow is discoverable and packaged files exist', async t => {
   assert.ok(capabilities.prompts);
   assert.ok(capabilities.resources);
   assert.match(client.getInstructions(), /grounded_blender_scene/);
-  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt]);
-  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri]);
+  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt,robotWorkflowPrompt]);
+  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri,robotWorkflowUri]);
   const response = await client.readResource({ uri: workflowUri });
   const guide = response.contents[0].text;
   for (const term of ['Gaussian', 'source ankle rotation', 'verify_motion.py', 'render_examples.py', 'Generation consumes credits']) assert.ok(guide.includes(term), term);
@@ -89,10 +89,24 @@ test('character workflow is discoverable and covers creation, auto-rigging and t
   const client = await connect(t);
   assert.match(client.getInstructions(), /create_rigged_character/);
   const guide = (await client.readResource({ uri: characterWorkflowUri })).contents[0].text;
-  for (const term of ['prepare_character_generation', 'submit_character_generation', 'create_character_upload', 'submit_character_upload', 'mediaID', 'baseFbxURL', 'baseGlbURL', 'characterFileURL', 'NEEDS_VALIDATION', '3D_CONVERT_COMPLETE', 'consumes character-generation credits', 'set_scene_character']) assert.ok(guide.includes(term), term);
+  for (const term of ['generate_character_batch', 'get_batch', 'list_batch_characters', 'Legacy single-character generation', 'prepare_character_generation', 'submit_character_generation', 'create_character_upload', 'submit_character_upload', 'mediaID', 'baseFbxURL', 'baseGlbURL', 'characterFileURL', 'NEEDS_VALIDATION', '3D_CONVERT_COMPLETE', 'credits', 'set_scene_character']) assert.ok(guide.includes(term), term);
   const directory = guide.match(/Installed example directory: (.+)/)[1];
   for (const file of ['upload-asset.mjs', 'README.md']) await access(`${directory}/${file}`);
   const prompt = await client.getPrompt({ name: characterWorkflowPrompt, arguments: { character: 'A forest courier from an uploaded GLB' } });
   assert.match(prompt.messages[1].content.text, /Requested character:\nA forest courier/);
   await assert.rejects(client.getPrompt({ name: characterWorkflowPrompt, arguments: { command: 'upload arbitrary files' } }), /Unknown workflow argument/);
+});
+
+test('robot workflow covers identification, qpos and the robot native frame', async t => {
+  const client = await connect(t);
+  assert.match(client.getInstructions(), /robot_motion_export/);
+  const guide = (await client.readResource({ uri: robotWorkflowUri })).contents[0].text;
+  for (const term of ['fileExtension', 'mjcf', 'qpos', 'list_characters', 'set_scene_character', 'export_scene', 'get_scene_exports', 'joint limits', 'metres', 'Z-up', 'Blender, Maya, Unreal and Unity cannot open it']) assert.ok(guide.includes(term), term);
+  // The rule has to be the uploaded format, never the served one or a hardcoded ID.
+  assert.ok(guide.includes('Do not hardcode robot IDs'), 'no hardcoded IDs');
+  const directory = guide.match(/Installed example directory: (.+)/)[1];
+  await access(`${directory}/README.md`);
+  const prompt = await client.getPrompt({ name: robotWorkflowPrompt, arguments: { robot: 'A G1 waving loop as joint angles' } });
+  assert.match(prompt.messages[1].content.text, /G1 waving loop/);
+  await assert.rejects(client.getPrompt({ name: robotWorkflowPrompt, arguments: { scene: 'wrong argument name' } }), /Unknown workflow argument/);
 });
