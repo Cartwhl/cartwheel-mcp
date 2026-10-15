@@ -3,7 +3,7 @@
     "name": "list_characters",
     "method": "GET",
     "path": "/characters",
-    "description": "Retrieves a list of characters available to the authenticated service account.\nIncludes presigned URLs for character assets.",
+    "description": "Retrieves a list of characters available to the authenticated service account.\nIncludes presigned URLs for character assets.\nIncludes robot characters, which the web app hides from its picker: a robot has fileExtension \"mjcf\" (its extension stays \"glb\", the format served for preview). Match robots by name from this list rather than expecting the user to supply an ID, and read cartwheel://workflows/robots before exporting one.",
     "parameters": [
       {
         "name": "limit",
@@ -51,7 +51,7 @@
     "name": "get_character",
     "method": "GET",
     "path": "/characters/{characterID}",
-    "description": "Retrieve the exact character ID, processing status, and signed assets. Poll after submit_character_upload or after finding a generated character in list_batch_characters. Wait for uploadStatus COMPLETE and usable deliverables; generatedStatus 3D_CONVERT_COMPLETE alone is not rig completion. Stop on FAILED, ADJUSTMENT_FAILED, 3D_CONVERT_FAILED, or NEEDS_VALIDATION and inspect in Cartwheel. For uploaded models, baseFbxURL/baseGlbURL are the rigged result; characterFileURL may be the original unrigged mesh. For generated characters use characterFbxURL for FBX or characterFileURL for the preview model. Estimated wait times are advisory. Returned IDs are checked to reject default-character substitution.",
+    "description": "Retrieve the exact character ID, processing status, and signed assets. Poll after submit_character_upload or after finding a generated character in list_batch_characters. Wait for uploadStatus COMPLETE and usable deliverables; generatedStatus 3D_CONVERT_COMPLETE alone is not rig completion. Stop on FAILED, ADJUSTMENT_FAILED, 3D_CONVERT_FAILED, or NEEDS_VALIDATION and inspect in Cartwheel. For uploaded models, baseFbxURL/baseGlbURL are the rigged result; characterFileURL may be the original unrigged mesh. For generated characters use characterFbxURL for FBX or characterFileURL for the preview model. Estimated wait times are advisory. Returned IDs are checked to reject default-character substitution. fileExtension \"mjcf\" marks a robot character, whose exports behave differently (see cartwheel://workflows/robots).",
     "parameters": [
       {
         "name": "characterID",
