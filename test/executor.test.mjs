@@ -9,6 +9,7 @@ test('stable CJS and ESM executor export shares the local catalog and preserves 
   assert.equal(require('@cartwhl/mcp-server/tool-executor').executeTool, executeTool);
   assert.equal((await import('@cartwhl/mcp-server/src/server.mjs')).definitions, definitions);
   assert.equal(require('@cartwhl/mcp-server/src/tool-executor/index.cjs').definitions, definitions);
+  assert.equal(require('@cartwhl/mcp-server/src/tools.json'), require('@cartwhl/mcp-server/src/tool-executor/tools.json'));
   assert.equal(localDefinitions, definitions);
   assert.equal(definitions.length, 32);
 });

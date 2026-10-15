@@ -6,6 +6,7 @@
   "license": "MIT",
   "exports": {
     "./tool-executor": "./src/tool-executor/index.cjs",
+    "./src/tools.json": "./src/tool-executor/tools.json",
     "./*": "./*"
   },
   "engines": {
