@@ -18,6 +18,8 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 
 ## What you need
 
+**Hosted OAuth experiment:** a separate [HTTP service](docs/HOSTED.md) is available via `npm run start:hosted`. It defaults to authenticated `get_profile`. Optional hosted motion uses AWS SigV4 service authentication plus the user's OAuth token to resolve the consent-selected API key from user-api on every tool request, then runs the shared executor locally in the hosted process. The key exists only in that request's memory, never in model output or a cross-request cache; no `CARTWHEEL_API_KEY` is configured for hosted mode. See the IAM/deployment gates in the guide. The setup below remains the full-featured 30-tool local stdio server.
+
 - **Node.js 22 or newer** and Git.
 - **A Cartwheel production account with API access** and a project API key. Check the [current plans](https://getcartwheel.com/pricing); API access is not included in every plan.
 - **An MCP client that can launch local stdio servers.** This repository runs on your machine; it is not a hosted MCP URL.
@@ -306,7 +308,7 @@ Read [SECURITY.md](SECURITY.md) for the trust boundary and reporting details.
 | HTTP 429 | Respect `retryAfter` and your plan's batch/concurrency limits. |
 | Generation times out | It may have been accepted. Check recent motions before submitting again. |
 | Server starts but prints nothing | Expected for stdio. Connect an MCP client to communicate with it. |
-| Hosted-only client asks for a URL | This version is local stdio. A GitHub repository URL is not an MCP endpoint. |
+| Hosted-only client asks for a URL | The separate [hosted OAuth service](docs/HOSTED.md) defaults to `get_profile` with opt-in backend motion tools; a GitHub repository URL is not an MCP endpoint. |
 
 ## Development
 
@@ -318,7 +320,9 @@ npm pack --dry-run
 
 Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, character generation, model/image upload, auto-rig submission and status handling, motion generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
-`src/tools.json`, `src/game-tools.mjs`, `src/swing-edit-constraints.mjs`, `src/scene-tools.mjs` and `src/character-tools.mjs` contain the selected authenticated API contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+[`src/tool-executor`](src/tool-executor/README.md) contains the shared runtime, catalog and constraints used by both local and hosted entry points. It is an internal module bundled in the root MCP package, with no separate workspace or publication. Keep contracts aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The local server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+
+Future hosted deployment should follow the existing apps' **AWS Lambda** approach. The current hosted entry point is a bare Node HTTP server for local/proxy testing; a Lambda adapter, API Gateway timeout compatibility and response/streaming behavior still need assessment. No hosting implementation is included. SigV4 service authentication remains required: use the configured caller role locally and the matching Lambda execution role in a future deployment. See [hosted deployment guidance](docs/HOSTED.md).
 
 ## Distribution
 

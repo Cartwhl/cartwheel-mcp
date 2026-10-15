@@ -14,6 +14,7 @@
     "src",
     "LICENSE",
     "README.md",
+    "docs/HOSTED.md",
     "examples/blender/*.py",
     "examples/blender/README.md",
     "examples/blender/assets/*.bvh",
@@ -37,6 +38,7 @@
   ],
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.mjs",
+    "start:hosted": "node --env-file-if-exists=.env src/hosted.mjs",
     "test": "node --test test/*.test.mjs",
     "check:package": "npm pack --dry-run",
     "example:game": "node examples/game/serve.mjs"
@@ -57,8 +59,14 @@
     "motion-capture"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@aws-sdk/credential-provider-node": "^3.972.86",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@smithy/hash-node": "^4.5.2",
+    "@smithy/protocol-http": "^5.6.2",
+    "@smithy/signature-v4": "^5.7.4",
     "ajv": "^8.20.0",
+    "jose": "^6.2.12",
+    "raw-body": "^3.0.0",
     "three": "0.185.1"
   }
 }
