@@ -310,7 +310,7 @@ Read [SECURITY.md](SECURITY.md) for the trust boundary and reporting details.
 | HTTP 429 | Respect `retryAfter` and your plan's batch/concurrency limits. |
 | Generation times out | It may have been accepted. Check recent motions before submitting again. |
 | Server starts but prints nothing | Expected for stdio. Connect an MCP client to communicate with it. |
-| Hosted-only client asks for a URL | This version is local stdio. A GitHub repository URL is not an MCP endpoint. |
+| Hosted-only client asks for a URL | This package runs locally over stdio; a GitHub repository URL is not an MCP endpoint. Use a client that can launch local stdio servers. |
 
 ## Development
 
@@ -322,7 +322,7 @@ npm pack --dry-run
 
 Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, character generation, model/image upload, auto-rig submission and status handling, motion generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
-`src/tools.json`, `src/game-tools.mjs`, `src/swing-edit-constraints.mjs`, `src/scene-tools.mjs` and `src/character-tools.mjs` contain the selected authenticated API contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+[`@cartwhl/mcp-server/tool-executor`](src/tool-executor/README.md) exposes the reusable runtime, catalog and constraints from this existing package, with no separate workspace or publication. It supports CommonJS and ESM; existing package file subpaths remain supported. The npm 0.7.0 release predates this export: consumers need an immutable source commit until a published version includes it. Keep contracts aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The local server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
 
 ## Distribution
 
