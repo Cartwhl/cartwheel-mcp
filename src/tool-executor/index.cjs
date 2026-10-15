@@ -1,4 +1,5 @@
 const Ajv = require('ajv');
+const { keyPose } = require('./swing-edit-constraints.cjs');
 const { gameDefinitions, validateGameArguments } = require('./game-tools.cjs');
 const { sceneDefinitions } = require('./scene-tools.cjs');
 const { characterDefinitions } = require('./character-tools.cjs');
@@ -90,4 +91,4 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     return response;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
-module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool };
+module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose };
