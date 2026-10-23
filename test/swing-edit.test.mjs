@@ -18,10 +18,11 @@ async function connect(t, fetchImpl) {
 test('swing-edit text-only generation preserves the prompt and seed without adding source anchors', async t => {
   let request;
   const client = await connect(t, async (url, options) => { request = { url, options }; return Response.json({ jobID: 'edit-one' }); });
-  const result = await client.callTool({ name: 'edit_motion', arguments: { ...slot, prompt: 'A person doing a calm walk.', duration: 6, seed: 42 } });
+  const prompt = 'A person doing a calm walk.\n\tThen stop.\r\nLook around.';
+  const result = await client.callTool({ name: 'edit_motion', arguments: { ...slot, prompt, duration: 6, seed: 42 } });
   assert.equal(result.isError, false);
   assert.equal(request.url.pathname, '/scenes/scene-test/objects/character/0/motionEdits');
-  assert.deepEqual(JSON.parse(request.options.body), { prompt: 'A person doing a calm walk.', duration: 6, seed: 42 });
+  assert.deepEqual(JSON.parse(request.options.body), { prompt, duration: 6, seed: 42 });
 });
 
 test('swing-edit mixed primitives and built-in repath retain their distinct wire contracts', async t => {
@@ -42,6 +43,7 @@ test('swing-edit mixed primitives and built-in repath retain their distinct wire
 test('malformed, ambiguous and private swing-edit controls never reach the API', async t => {
   const client = await connect(t, async () => assert.fail('Invalid input reached API'));
   const args = [
+    { prompt: 'Walk.\nThen\u001bstop.' },
     { constraints: [{ type: 'right-hand', ...pose(127) }] },
     { constraints: [{ type: 'end-effector', ...pose(30), joint_names: ['r_wrist'] }] },
     { constraints: [{ type: 'right-hand', ...pose(30), outputURL: 'https://example.com' }] },

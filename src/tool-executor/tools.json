@@ -180,12 +180,13 @@
           "example": "Project X"
         },
         "exportSettings": {
-          "allOf": [
-            {
-              "allOf": [
-                {
                   "type": "object",
                   "properties": {
+                    "characterID": {
+                      "type": "string",
+                      "description": "The ID of the character to export the motion on.",
+                      "example": "char-upload-Axel"
+                    },
                     "exportType": {
                       "type": "string",
                       "enum": [
@@ -509,31 +510,16 @@
                       "description": "The axis to use for the up orientation of the motion",
                       "example": "Y"
                     }
-                  }
-                }
-              ],
+                  },
+              "additionalProperties": false,
               "required": [
+                "characterID",
                 "exportType",
                 "forward",
                 "frameRate",
                 "frameStepSize",
                 "up"
-              ]
-            },
-            {
-              "type": "object",
-              "required": [
-                "characterID"
               ],
-              "properties": {
-                "characterID": {
-                  "type": "string",
-                  "description": "The ID of the character to export the motion on.",
-                  "example": "char-upload-Axel"
-                }
-              }
-            }
-          ],
           "description": "The export settings for the motion generation"
         },
         "loop": {
@@ -598,7 +584,7 @@
     "name": "get_motion",
     "method": "GET",
     "path": "/motion/{motionID}",
-    "description": "Retrieve primary motion status/downloads or apply one actor’s body to another accessible character. For multi-person Comic retargeting provide characterID and its zero-based bodyIndex. Use list_batch_motions for the complete ordered body, facial, identity and source-camera output arrays.",
+    "description": "Retrieve primary motion status/downloads or apply one actor’s body to another accessible character. Providing characterID can start synchronous retarget processing. For multi-person Comic retargeting provide characterID and its zero-based bodyIndex. Use list_batch_motions for the complete ordered body, facial, identity and source-camera output arrays. After an uncertain processing outcome, inspect motion status; do not automatically retry retargeting.",
     "parameters": [
       {
         "name": "motionID",
@@ -697,9 +683,9 @@
       ]
     },
     "annotations": {
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": true
     }
   },

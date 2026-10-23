@@ -17,7 +17,7 @@ async function connect(t, fetchImpl) {
 }
 const unpack = response => JSON.parse(response.content[0].text);
 const generation = {
-  prompts: ['A person waving hello'], requestedModel: 'swing',
+  prompts: ['A person waving hello.\n\tThen take a bow.\r\nPause.'], requestedModel: 'swing',
   exportSettings: { characterID: 'char-test', exportType: 'bvh', forward: 'Z', up: 'Y', frameRate: 30, frameStepSize: 1 },
 };
 
@@ -25,7 +25,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
   const calls = [];
   const client = await connect(t, async (url, options) => {
     calls.push({ url, options });
-    return Response.json({ motions: [], nextToken: 'next' });
+    return Response.json({ items: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
   assert.equal(tools.length, 32);
@@ -47,7 +47,7 @@ test('generation submits the API body once and returns its batch ID', async t =>
     assert.equal(url.pathname, '/motion/fromText');
     assert.equal(options.method, 'POST');
     assert.deepEqual(JSON.parse(options.body), generation);
-    return Response.json({ batchID: 'batch-1' }, { status: 202 });
+    return Response.json({ batchID: 'batch-1', status: 'pending' }, { status: 202 });
   });
   assert.equal(unpack(await client.callTool({ name: 'generate_motion', arguments: generation })).batchID, 'batch-1');
   assert.equal(count, 1);
@@ -58,6 +58,7 @@ test('invalid arguments and unknown tools never reach the API', async t => {
   for (const [name, args] of [
     ['generate_motion', {}],
     ['generate_motion', { ...generation, requestedModel: 'invented' }],
+    ['generate_motion', { ...generation, prompts: ['Wave.\nThen\u0000bow.'] }],
     ['generate_motion', { ...generation, exportSettings: { characterID: 'x' } }],
     ['list_motions', { limit: 101 }],
     ['list_motions', { url: 'https://other.example' }],
@@ -103,13 +104,13 @@ const capture = {
 test('Comic 4 upload preparation, capture, and retrieval preserve every actor and face slot', async t => {
   const calls = [];
   const outputs = {
-    motionID: 'motion-1', bvhURL: 'https://assets.example/primary.bvh',
-    bvhURLs: ['https://assets.example/a.bvh', 'https://assets.example/b.bvh'],
-    exportURLs: [null, 'https://assets.example/b.fbx'], exportFilenames: [null, 'b.fbx'],
-    faceURLs: [{ bvhURL: 'https://assets.example/a-face.fbx' }, { bvhURL: 'https://assets.example/b-face.fbx' }],
-    mhrBvhURLs: ['', 'https://assets.example/b-mhr.bvh'],
-    mhrIdentityJsonURLs: ['', 'https://assets.example/b-identity.json'],
-    cameraFbxURL: 'https://assets.example/camera.fbx', sourceVideoMediaID: 'media-1',
+    motionID: 'motion-1', bvhURL: 'https://assets.getcartwheel.com/primary.bvh',
+    bvhURLs: ['https://assets.getcartwheel.com/a.bvh', 'https://assets.getcartwheel.com/b.bvh'],
+    exportURLs: [null, 'https://assets.getcartwheel.com/b.fbx'], exportFilenames: [null, 'b.fbx'],
+    faceURLs: [{ bvhURL: 'https://assets.getcartwheel.com/a-face.fbx' }, { bvhURL: 'https://assets.getcartwheel.com/b-face.fbx' }],
+    mhrBvhURLs: [null, 'https://assets.getcartwheel.com/b-mhr.bvh'],
+    mhrIdentityJsonURLs: [null, 'https://assets.getcartwheel.com/b-identity.json'],
+    cameraFbxURL: 'https://assets.getcartwheel.com/camera.fbx', sourceVideoMediaID: 'media-1',
   };
   const client = await connect(t, async (url, options) => {
     calls.push({ url, options });

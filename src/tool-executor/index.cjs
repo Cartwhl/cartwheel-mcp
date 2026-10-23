@@ -4,14 +4,19 @@ const { keyPose } = require('./swing-edit-constraints.cjs');
 const { gameDefinitions, validateGameArguments } = require('./game-tools.cjs');
 const { sceneDefinitions } = require('./scene-tools.cjs');
 const { characterDefinitions, validateCharacterBatchArguments } = require('./character-tools.cjs');
-const definitions = [...require('./tools.json'), ...gameDefinitions, ...sceneDefinitions, ...characterDefinitions];
+const { boundedInput } = require('./input-contract.cjs');
+const { outputSchemas, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit } = require('./output-contract.cjs');
+const definitions = [...require('./tools.json'), ...gameDefinitions, ...sceneDefinitions, ...characterDefinitions]
+  .map(tool => ({ ...tool, inputSchema: boundedInput(tool.inputSchema, tool.name),
+    ...(outputSchemas[tool.name] ? { outputSchema: outputSchemas[tool.name] } : {}) }));
 const origins = Object.freeze({ staging: 'https://external-mogen-staging.api.getcartwheel.com', production: 'https://external-mogen.api.getcartwheel.com' });
-const ajv = new Ajv({ strict: false, validateFormats: false });
+const ajv = new Ajv({ strict: false, strictNumbers: true, validateFormats: false });
 const validators = new Map(definitions.map(tool => [tool.name, ajv.compile(tool.inputSchema)]));
 class ToolInputError extends Error {
   constructor(message, details) { super(message); this.details = details; }
 }
 function toolRequest(name, args = {}) {
+  if (!withinJSONLimit({ operation: name, arguments: args })) throw new ToolInputError('Invalid tool arguments');
   const tool = definitions.find(item => item.name === name);
   if (!tool) throw new ToolInputError('Unknown Cartwheel tool');
   const validate = validators.get(name);
@@ -33,10 +38,15 @@ function toolRequest(name, args = {}) {
     body: Object.fromEntries(Object.entries(args).filter(([key]) => !parameters.some(p => p.name === key))) };
 }
 const longOperations = new Set(['loop_motion', 'stitch_motions', 'set_scene_character', 'prepare_character_generation', 'submit_character_generation']);
+function isProcessingTool(name, args = {}) {
+  if (name === 'get_motion') return args.characterID !== undefined;
+  return definitions.find(tool => tool.name === name)?.annotations.readOnlyHint === false;
+}
 // Transport injection is backend-owned, never an input argument. One timeout budget
 // covers preflight checks and execution; redirects are forbidden in both transports.
 async function executeTool(name, args, { apiKey, environment = 'production', fetchImpl = globalThis.fetch,
-  requestJSON, timeoutMs = 30000, signal, createdByUser, specialHandler } = {}) {
+  requestJSON, timeoutMs = name === 'get_motion' && isProcessingTool(name, args) ? 35000 : 30000,
+  signal, createdByUser, specialHandler } = {}) {
   if (!apiKey?.trim()) throw new Error('CARTWHEEL_API_KEY is required');
   const base = origins[environment];
   if (!base) throw new Error('Explicit staging or production environment required');
@@ -66,7 +76,20 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
       if (response.status === 429) error.retryAfter = response.headers.get('retry-after');
       throw error;
     }
-    return response.status === 204 ? { status: 204 } : response.json();
+    if (response.status === 204) return { status: 204 };
+    const reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > JSON_LIMIT) throw new Error('Response too large');
+        chunks.push(Buffer.from(value));
+      }
+      return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    } finally { void reader.cancel().catch(() => {}); }
   };
   try {
     if (tool.handler) {
@@ -91,7 +114,9 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     }
     const response = await api(path, tool.method, body);
     if (name === 'get_character' && response.characterID !== args.characterID) throw new ToolInputError('The API did not return the requested character. No replacement character was accepted. Check the character ID and project access.');
-    return idempotencyKey ? { ...response, idempotencyKey } : response;
+    const output = projectToolOutput(name, response, [apiKey]);
+    return idempotencyKey ? { ...output, idempotencyKey } : output;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
-module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose };
+module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose,
+  isProcessingTool, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit };
