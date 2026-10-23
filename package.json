@@ -57,7 +57,7 @@
     "motion-capture"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "ajv": "^8.20.0",
     "three": "0.185.1"
   }
