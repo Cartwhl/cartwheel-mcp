@@ -5,10 +5,11 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createServer, definitions } from '../src/server.mjs';
+import { viewerTool, viewerResourceUri, viewerResource, supportsViewerApp } from '../src/viewer.mjs';
 
-async function connect(t, fetchImpl) {
+async function connect(t, fetchImpl, capabilities = {}) {
   const server = createServer({ apiKey: 'test-secret', fetchImpl });
-  const client = new Client({ name: 'test', version: '1' });
+  const client = new Client({ name: 'test', version: '1' }, { capabilities });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
   await client.connect(clientTransport);
@@ -28,7 +29,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
     return Response.json({ items: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 32);
+  assert.equal(tools.length, 33);
   assert.equal(tools.find(tool => tool.name === 'generate_motion').annotations.readOnlyHint, false);
   const response = await client.callTool({ name: 'list_motions', arguments: { limit: 10, nextToken: 'a+b/=', sortAscending: false } });
   assert.equal(unpack(response).nextToken, 'next');
@@ -185,7 +186,57 @@ test('real stdio process completes MCP initialization and discovery', async t =>
   const client = new Client({ name: 'stdio-test', version: '1' });
   t.after(() => client.close());
   await client.connect(transport);
-  assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), definitions.map(tool => tool.name));
+  assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), [...definitions.map(tool => tool.name), viewerTool.name]);
   assert.equal((await client.listPrompts()).prompts[0].name, 'grounded_blender_scene');
   assert.match((await client.readResource({ uri: 'cartwheel://workflows/blender' })).contents[0].text, /Gaussian/);
+  assert.equal((await client.callTool({ name: viewerTool.name })).structuredContent.previewUrl,
+    'https://app.getcartwheel.com/asset-viewer.html#characterName=MHR');
+});
+
+test('local viewer negotiates MCP Apps and otherwise returns a private expiring link through the same tool', async t => {
+  const glb = 'https://bucket.s3.amazonaws.com/character.glb?X-Amz-Signature=private-glb';
+  const bvh = 'https://bucket.s3.amazonaws.com/motion.bvh?X-Amz-Signature=private-bvh';
+  for (const app of [false, true]) {
+    const calls = [];
+    const client = await connect(t, async (url, options) => {
+      calls.push(url);
+      assert.equal(url.origin, 'https://external-mogen.api.getcartwheel.com');
+      assert.equal(options.headers['x-api-key'], 'test-secret');
+      return Response.json(url.pathname.includes('/characters/')
+        ? { characterID: 'character-1', characterName: 'Character', uploadStatus: 'COMPLETE', baseGlbURL: glb }
+        : { motionID: 'motion-1', status: 'COMPLETED', bvhURL: bvh });
+    }, app ? { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] } } } : {});
+    const tool = (await client.listTools()).tools.find(tool => tool.name === viewerTool.name);
+    assert.deepEqual(tool, viewerTool);
+    assert.equal(tool.securitySchemes, undefined);
+    const resource = (await client.readResource({ uri: viewerResourceUri })).contents[0];
+    assert.deepEqual(resource._meta.ui.csp.frameDomains, ['https://app.getcartwheel.com']);
+    assert.equal(resource._meta['openai/ui'], undefined);
+    assert.doesNotMatch(resource.text, /X-Amz-Signature|private-glb|private-bvh|app-staging/);
+    const result = await client.callTool({ name: viewerTool.name, arguments: { characterID: 'character-1', motionID: 'motion-1' } });
+    assert.equal(result.isError, false);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].searchParams.get('characterID'), 'character-1');
+    assert.equal(calls[1].searchParams.get('downloadType'), 'bvh');
+    const url = new URL(result._meta.viewerUrl);
+    assert.equal(url.origin, 'https://app.getcartwheel.com');
+    assert.equal(url.search, '');
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    assert.equal(fragment.get('meshUrl'), glb);
+    assert.equal(fragment.get('bvhUrl'), bvh);
+    assert.equal(fragment.get('retargetedMotion'), 'true');
+    if (app) {
+      assert.equal(result.structuredContent.previewUrl, undefined);
+      assert.doesNotMatch(JSON.stringify([result.content, result.structuredContent]), /https:|Signature/);
+    } else {
+      assert.equal(result.structuredContent.previewUrl, url.href);
+      assert.ok(result.content[0].text.includes(url.href));
+      assert.match(result.content[0].text, /Private, expiring/);
+    }
+    assert.equal((await client.callTool({ name: viewerTool.name, arguments: { meshUrl: glb } })).isError, true);
+    assert.equal(calls.length, 2);
+  }
+  assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html'] } } }), false);
+  assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: 'text/html;profile=mcp-app' } } }), false);
+  assert.throws(() => viewerResource('https://evil.example'), /Viewer unavailable/);
 });
