@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { definitions, executeTool, ToolInputError, toolRequest } from './tool-executor/index.cjs';
+import { definitions, executeTool, ToolInputError, toolRequest, SceneListTooLargeError } from './tool-executor/index.cjs';
 import { registerWorkflows } from './workflows.mjs';
 import { invokeViewer, viewerTool, viewerResource, viewerResourceUri, supportsViewerApp } from './viewer.mjs';
 import { prepareMotion, MotionInputError } from './motion-analysis.mjs';
@@ -48,6 +48,7 @@ export function createServer({ apiKey, fetchImpl = fetch, timeoutMs }) {
         },
       }));
     } catch (error) {
+      if (error instanceof SceneListTooLargeError) return result(error.result, true);
       if (error instanceof ToolInputError) return result({ error: error.message, ...(error.details ? { details: error.details } : {}) }, true);
       return result({ error: error instanceof MotionInputError ? error.message : error.status ? 'Cartwheel API request failed' : 'Cartwheel request failed, timed out, was cancelled, or returned invalid JSON.',
         ...(error.status ? { status: error.status } : {}), ...(error.retryAfter ? { retryAfter: error.retryAfter } : {}), ...(guidance ? { guidance } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) }, true);

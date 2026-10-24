@@ -6,6 +6,7 @@ const { sceneDefinitions } = require('./scene-tools.cjs');
 const { characterDefinitions, validateCharacterBatchArguments } = require('./character-tools.cjs');
 const { boundedInput } = require('./input-contract.cjs');
 const { outputSchemas, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit } = require('./output-contract.cjs');
+const { ResponseTooLargeError, SceneListTooLargeError } = require('./response-errors.cjs');
 const definitions = [...require('./tools.json'), ...gameDefinitions, ...sceneDefinitions, ...characterDefinitions]
   .map(tool => ({ ...tool, inputSchema: boundedInput(tool.inputSchema, tool.name),
     ...(outputSchemas[tool.name] ? { outputSchema: outputSchemas[tool.name] } : {}) }));
@@ -85,7 +86,7 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > JSON_LIMIT) throw new Error('Response too large');
+        if (size > JSON_LIMIT) throw new ResponseTooLargeError();
         chunks.push(Buffer.from(value));
       }
       return JSON.parse(Buffer.concat(chunks).toString('utf8'));
@@ -116,7 +117,10 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     if (name === 'get_character' && response.characterID !== args.characterID) throw new ToolInputError('The API did not return the requested character. No replacement character was accepted. Check the character ID and project access.');
     const output = projectToolOutput(name, response, [apiKey]);
     return idempotencyKey ? { ...output, idempotencyKey } : output;
+  } catch (error) {
+    if (name === 'list_scenes' && error instanceof ResponseTooLargeError) throw new SceneListTooLargeError(args);
+    throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
 module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose,
-  isProcessingTool, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit };
+  isProcessingTool, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit, ResponseTooLargeError, SceneListTooLargeError };

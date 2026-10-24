@@ -22,6 +22,21 @@ const generation = {
   exportSettings: { characterID: 'char-test', exportType: 'bvh', forward: 'Z', up: 'Y', frameRate: 30, frameStepSize: 1 },
 };
 
+test('local MCP returns safe scene-list size guidance without retrying', async t => {
+  let calls = 0;
+  const client = await connect(t, async () => { calls++; return new Response(' '.repeat(1024 * 1024 + 1)); });
+  for (const limit of [20, 1]) {
+    const response = await client.callTool({ name: 'list_scenes', arguments: { limit } });
+    assert.equal(response.isError, true);
+    const failure = unpack(response);
+    assert.equal(failure.code, 'scene_list_too_large');
+    assert.equal(failure.suggestedLimit, limit === 20 ? 10 : undefined);
+    assert.equal(failure.retryable, false);
+    assert.doesNotMatch(JSON.stringify(response), /test-secret|https?:/);
+  }
+  assert.equal(calls, 2);
+});
+
 test('MCP discovery, authenticated pagination and path encoding', async t => {
   const calls = [];
   const client = await connect(t, async (url, options) => {

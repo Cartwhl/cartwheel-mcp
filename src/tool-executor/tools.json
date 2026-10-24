@@ -83,7 +83,7 @@
     "name": "list_scenes",
     "method": "GET",
     "path": "/scenes",
-    "description": "Retrieves scenes available to the authenticated service account.",
+    "description": "Retrieves scenes available to the authenticated service account, including saved key poses. Responses are capped at 1 MiB. On scene_list_too_large, manually retry with half the current limit (rounded down, minimum 1), keeping other arguments unchanged; if limit was omitted, use 1. Stop if limit 1 is still too large: a single scene can exceed the cap and success is not guaranteed. No automatic retries.",
     "parameters": [
       {
         "name": "limit",

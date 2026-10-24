@@ -9,6 +9,26 @@ Exports: `definitions` (all 32 local tools), `toolRequest`, `executeTool`,
 `projectToolOutput`, `safeAsset`, `JSON_LIMIT`, `withinJSONLimit`, and
 `isProcessingTool(name, args)`.
 
+`ResponseTooLargeError` is the safe byte-overflow signal for injected transports.
+The canonical executor converts it to `SceneListTooLargeError` for `list_scenes`;
+adapters return its sanitized `result` (`code: scene_list_too_large`,
+`retryable: false`, guidance and, when possible, `suggestedLimit`). Halve an explicit
+limit, rounding down with minimum 1; with no explicit limit, suggest 1 rather than
+guessing the API default. At limit 1, stop without a retry suggestion. No call is
+retried automatically and a smaller page is not guaranteed to fit. Other tools
+retain their existing failure/outcome handling. Never classify by remote error text.
+
+Persisted scene/edit key poses allow 1–512 rotation triples and optional
+`smoothRoot2d`; writes still allow 1–256 and require `smoothRoot2d`. This is a
+read-compatibility ceiling, not a skeleton identity/compatibility check. The bundled
+MHR GLB has 127 skin joints and 56 leaves (183 entries with leaf End Sites); its
+prepared body BVHs have 127 entries. Those assets do not define a maximum for
+saved native editor snapshots. The reported saved MHR poses exceed 256, so 512
+doubles the previous read ceiling to provide bounded headroom without claiming an
+exact original pose count or unlimited custom-rig support. The 300-pose limit, numeric/vector bounds, credential
+and URL safety, and aggregate 1 MiB cap remain in force. Reading a pose does not
+imply that the write tools accept it unchanged.
+
 `toolRequest(name, args)` validates catalog schemas and semantic constraints, then
 returns `{ tool, args, path, body }`. `executeTool(name, args, options)` uses fixed
 staging/production API origins and forbids redirects. Options supply `apiKey`,

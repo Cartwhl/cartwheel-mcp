@@ -1,5 +1,6 @@
 const Ajv = require('ajv');
 const { keyPose } = require('./swing-edit-constraints.cjs');
+const { ResponseTooLargeError } = require('./response-errors.cjs');
 const JSON_LIMIT = 1024 * 1024;
 function withinJSONLimit(value) {
   try { return Buffer.byteLength(JSON.stringify(value), 'utf8') <= JSON_LIMIT; }
@@ -42,8 +43,13 @@ const motionFields = { jobID: string, motionID: string, status: string, errorMes
 const listingFields = { ...motionFields, title: string };
 const motion = object({ ...listingFields, variations: array(object(listingFields)) });
 const motions = object({ items: array(motion), nextToken: string, hasMore: boolean }, ['items']);
-// Persisted poses predate the stricter write contract; smoothRoot2d is optional.
-const outputKeyPose = { ...keyPose, required: ['frame', 'localJointRot', 'rootPosition'] };
+// Persisted native skeleton snapshots are not swing-edit write inputs. The bundled
+// MHR skin has 127 joints (183 with leaf End Sites), not a universal persisted
+// skeleton maximum. Use a bounded 512-entry read ceiling for larger saved rigs;
+// retain the 256-entry write ceiling and the aggregate 1 MiB response protection.
+const outputKeyPose = { ...keyPose, properties: { ...keyPose.properties,
+  localJointRot: { ...keyPose.properties.localJointRot, maxItems: 512 },
+}, required: ['frame', 'localJointRot', 'rootPosition'] };
 const outputKeyPoses = { ...array(outputKeyPose), maxItems: 300 };
 const timeline = object({ jobID: string, generationType: string, variationNumber: number, outputNumber: number,
   title: string, trimStart: number, trimEnd: number, stitchStartDelay: number, stitchEndDelay: number,
@@ -109,8 +115,10 @@ function project(value, schema, field = '') {
   return value;
 }
 function assertSafeOutput(value, secrets) {
-  if (!withinJSONLimit(value)) throw new Error('Invalid upstream data');
-  const serialized = JSON.stringify(value);
+  let serialized;
+  try { serialized = JSON.stringify(value); } catch { throw new Error('Invalid upstream data'); }
+  if (typeof serialized !== 'string') throw new Error('Invalid upstream data');
+  if (Buffer.byteLength(serialized, 'utf8') > JSON_LIMIT) throw new ResponseTooLargeError();
   if (/Bearer\s/i.test(serialized) || secrets.some(secret => secret && serialized.includes(secret))) throw new Error('Credential reflection');
 }
 function projectToolOutput(name, value, secrets = []) {

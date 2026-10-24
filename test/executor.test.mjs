@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { definitions, executeTool, origins, projectToolOutput, JSON_LIMIT, isProcessingTool, toolRequest } from '@cartwhl/mcp-server/tool-executor';
+import { definitions, executeTool, origins, projectToolOutput, JSON_LIMIT, isProcessingTool, toolRequest,
+  ResponseTooLargeError, SceneListTooLargeError } from '@cartwhl/mcp-server/tool-executor';
 import { definitions as localDefinitions } from '../src/server.mjs';
 
 test('stable CJS and ESM executor export shares the local catalog and preserves deep imports', async () => {
@@ -124,4 +125,64 @@ test('edit history check and final request share a single backend deadline', asy
     },
   });
   assert.equal(budgets.length, 2); assert.ok(budgets[1] < budgets[0]);
+});
+
+test('persisted native poses above the write ceiling survive every scene/edit read contract', async () => {
+  const slot = { sceneID: 'scene-1', referenceName: 'character', timelineIndex: 0 };
+  // Sanitized synthetic data, not a transcription of a staging response or rig identity.
+  const pose = joints => ({ frame: 0, localJointRot: Array.from({ length: joints }, () => [0.12, -0.23, 0.34]), rootPosition: [0, 1, 0] });
+  const scene = keyPose => ({ sceneID: slot.sceneID, objects: { character: { objectID: 'character-1', timeline: [{ keyPoses: [keyPose] }] } } });
+  const edit = keyPose => ({ jobID: 'edit-1', status: 'COMPLETED', keyPoses: [keyPose] });
+  for (const joints of [257, 320, 512]) {
+    const p = pose(joints);
+    for (const [name, value] of Object.entries({ list_scenes: { scenes: [scene(p)] }, get_scene: scene(p), create_scene: scene(p),
+      list_motion_edits: { jobs: [edit(p)] }, get_motion_edit: edit(p) })) {
+      assert.deepEqual(projectToolOutput(name, value), value, name);
+    }
+    for (const name of ['save_key_poses', 'edit_key_poses', 'edit_motion']) {
+      assert.throws(() => toolRequest(name, { ...slot, keyPoses: [{ ...p, smoothRoot2d: [0, 0] }] }), /Invalid tool arguments/);
+    }
+  }
+  for (const name of ['save_key_poses', 'edit_key_poses', 'edit_motion']) {
+    assert.doesNotThrow(() => toolRequest(name, { ...slot, keyPoses: [{ ...pose(256), smoothRoot2d: [0, 0] }] }));
+  }
+  for (const bad of [pose(513), { ...pose(320), localJointRot: [[1, 2]] }, { ...pose(320), rootPosition: [0, Infinity, 0] }]) {
+    assert.throws(() => projectToolOutput('get_scene', scene(bad)), /Invalid upstream data/);
+  }
+  const saved = scene(pose(320));
+  assert.deepEqual(await executeTool('list_scenes', { limit: 20 }, { apiKey: 'SECRET', fetchImpl: async () => Response.json({ scenes: [saved] }) }), { scenes: [saved] });
+  assert.throws(() => projectToolOutput('get_scene', { ...saved, sceneName: 'SECRET' }, ['SECRET']), /Credential reflection/);
+  const unsafe = structuredClone(saved);
+  unsafe.objects.character.timeline[0].bvhURL = 'https://untrusted.example/motion.bvh';
+  assert.throws(() => projectToolOutput('get_scene', unsafe), /Invalid asset URL/);
+  const huge = { jobs: Array.from({ length: 150 }, () => edit(pose(512))) };
+  assert.ok(Buffer.byteLength(JSON.stringify(huge)) > JSON_LIMIT);
+  assert.throws(() => projectToolOutput('list_motion_edits', huge), ResponseTooLargeError);
+});
+
+test('canonical executor classifies byte overflow from native and injected transports, not arbitrary diagnostics', async () => {
+  const page = { scenes: [] };
+  assert.deepEqual(await executeTool('list_scenes', { limit: 1 }, { apiKey: 'SECRET',
+    fetchImpl: async () => new Response(JSON.stringify(page).padEnd(JSON_LIMIT, ' ')) }), page);
+  for (const args of [{ limit: 100 }, { limit: 3 }, { limit: 1 }, {}]) {
+    for (const transport of ['native', 'injected', 'projection']) {
+      let calls = 0;
+      const options = transport === 'native' ? { fetchImpl: async () => { calls++; return new Response(' '.repeat(JSON_LIMIT + 1)); } }
+        : { requestJSON: async () => { calls++; if (transport === 'injected') throw new ResponseTooLargeError();
+          return { scenes: [{ sceneID: 'scene-1', sceneName: 'x'.repeat(JSON_LIMIT), objects: {} }] }; } };
+      await assert.rejects(executeTool('list_scenes', args, { apiKey: 'SECRET', ...options }), error => {
+        assert.ok(error instanceof SceneListTooLargeError);
+        assert.equal(error.result.code, 'scene_list_too_large');
+        assert.equal(error.result.retryable, false);
+        assert.equal(error.result.suggestedLimit, args.limit === 1 ? undefined : args.limit === 100 ? 50 : 1);
+        assert.match(error.result.guidance, args.limit === 1 ? /Stop:.*limit 1/ : /Retry list_scenes manually/);
+        assert.doesNotMatch(JSON.stringify(error.result), /SECRET|https?:/);
+        return true;
+      });
+      assert.equal(calls, 1);
+    }
+  }
+  await assert.rejects(executeTool('list_scenes', { limit: 20 }, { apiKey: 'SECRET', requestJSON: async () => {
+    throw new Error('Response too large: upstream diagnostic');
+  } }), error => !(error instanceof SceneListTooLargeError));
 });
