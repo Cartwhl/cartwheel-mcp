@@ -149,6 +149,28 @@ available through the existing package wildcard export at
 `@cartwhl/mcp-server/src/viewer.mjs` and executes through an injected authorized
 tool invoker. All six workflow resources remain registered alongside the UI.
 
+### Preview choices
+
+`show_previews({ items })` presents 1–20 existing character or motion choices in
+a horizontally scrolling image/video carousel. First retrieve accessible results
+using the list/search/batch tools, then supply short referenceable titles and the
+exact `characterID` and/or `motionID` (`jobID` on motion listings). Optional
+`media: { type: "image" | "video", url }` uses the returned `thumbnailURL`,
+`studioPreviewURL`, or `mp4URL`. Omit media if unavailable. Different variations
+must have different addressable motion IDs; do not invent IDs from variation numbers.
+
+The tool only presents supplied data; it does not fetch assets, verify access,
+generate, or retarget. **Open in viewer** sends a user message through the MCP Apps
+bridge, asking chat to call `view_character_motion` with the exact selected IDs.
+Acknowledging that message is not confirmation that the viewer opened. Hosts
+without text-message support show the choices but disable the CTA; clients without
+MCP Apps still receive titles and IDs as text.
+
+The resource `ui://cartwheel/asset-previews/v1.html` embeds the fixed environment's
+`/asset-previews.html` frontend. Media capabilities are delivered in per-call
+`_meta.previewItems`, not model-visible results or the static resource. The new
+frontend entry must be deployed before the tool is released to that environment.
+
 | Tool | What it does |
 | --- | --- |
 | `generate_motion` | Submit text prompts with model and export settings. **Consumes credits.** |
@@ -249,7 +271,7 @@ Edits are asynchronous and consume credits. Submit once and poll the existing jo
 
 Contacts are kinematic estimates. Authored signal/VFX timing is separate. Selected cycles, transitions, masks and character retargets still need visual review; switching to swing-edit is not a general repair for every motion/character combination. The [audit](examples/game/AUDIT.md) records the changes and limits.
 
-See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **32 core tools plus the viewer and six workflows**.
+See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **32 core tools plus the viewer, preview choices, and six workflows**.
 
 ## Comic 4: video to editable 3D
 
@@ -313,7 +335,7 @@ See [the Blender guide](examples/blender/README.md) for source files, rendering 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes 32 explicit core tools plus the viewer. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes 32 explicit core tools plus the viewer and preview choices. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
 - `analyze_motion` reads bounded BVH assets only from approved Cartwheel production storage. API keys are never sent to asset storage. The optional game server is a separate loopback-only process without an API proxy.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.

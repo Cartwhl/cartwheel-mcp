@@ -6,6 +6,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createServer, definitions } from '../src/server.mjs';
 import { viewerTool, viewerResourceUri, viewerResource, supportsViewerApp } from '../src/viewer.mjs';
+import { previewsTool, previewsResourceUri } from '../src/previews.mjs';
 
 async function connect(t, fetchImpl, capabilities = {}) {
   const server = createServer({ apiKey: 'test-secret', fetchImpl });
@@ -44,7 +45,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
     return Response.json({ items: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 33);
+  assert.equal(tools.length, 34);
   assert.equal(tools.find(tool => tool.name === 'generate_motion').annotations.readOnlyHint, false);
   const response = await client.callTool({ name: 'list_motions', arguments: { limit: 10, nextToken: 'a+b/=', sortAscending: false } });
   assert.equal(unpack(response).nextToken, 'next');
@@ -201,7 +202,7 @@ test('real stdio process completes MCP initialization and discovery', async t =>
   const client = new Client({ name: 'stdio-test', version: '1' });
   t.after(() => client.close());
   await client.connect(transport);
-  assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), [...definitions.map(tool => tool.name), viewerTool.name]);
+  assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), [...definitions.map(tool => tool.name), viewerTool.name, previewsTool.name]);
   assert.equal((await client.listPrompts()).prompts[0].name, 'grounded_blender_scene');
   assert.match((await client.readResource({ uri: 'cartwheel://workflows/blender' })).contents[0].text, /Gaussian/);
   assert.equal((await client.callTool({ name: viewerTool.name })).structuredContent.previewUrl,
@@ -254,4 +255,21 @@ test('local viewer negotiates MCP Apps and otherwise returns a private expiring 
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html'] } } }), false);
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: 'text/html;profile=mcp-app' } } }), false);
   assert.throws(() => viewerResource('https://evil.example'), /Viewer unavailable/);
+});
+
+test('preview presentation is discoverable without API calls and keeps media in UI-only metadata', async t => {
+  const client = await connect(t, async () => assert.fail('Presenting existing previews must not call the API'));
+  assert.deepEqual((await client.listTools()).tools.find(tool => tool.name === previewsTool.name), previewsTool);
+  const items = Array.from({ length: 10 }, (_, i) => ({ title: `Walk ${i + 1}`, motionID: `motion-${i + 1}`,
+    media: { type: 'video', url: `https://resources.getcartwheel.com/previews/${i}.mp4?signature=private` } }));
+  const response = await client.callTool({ name: previewsTool.name, arguments: { items } });
+  assert.equal(response.isError, false);
+  assert.equal(response.structuredContent.items.length, 10);
+  assert.equal(response._meta.previewItems[9].motionID, 'motion-10');
+  assert.equal(response._meta.previewItems[9].media.url, items[9].media.url);
+  assert.doesNotMatch(JSON.stringify([response.content, response.structuredContent]), /https:|signature=private/);
+  const resource = (await client.readResource({ uri: previewsResourceUri })).contents[0];
+  assert.equal(resource.mimeType, 'text/html;profile=mcp-app');
+  assert.deepEqual(resource._meta.ui.csp.frameDomains, ['https://app.getcartwheel.com']);
+  assert.doesNotMatch(resource.text, /signature=private|test-secret/);
 });
