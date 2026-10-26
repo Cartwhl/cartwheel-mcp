@@ -33,6 +33,22 @@ test('only the production origin receives credentials', async t => {
   assert.equal(seen[0].options.redirect,'error');
 });
 
+test('a named environment selects one of the fixed Cartwheel origins, never an arbitrary host', async t => {
+  const seen=[];
+  const server=createServer({apiKey:'test-key', environment:'staging', fetchImpl:async(url, options)=>{
+    seen.push({url,options}); return Response.json({characters:[]});
+  }});
+  const client=new Client({name:'security-test',version:'1'});
+  const [a,b]=InMemoryTransport.createLinkedPair();await server.connect(b);await client.connect(a);
+  t.after(async()=>{await client.close();await server.close();});
+  await client.callTool({name:'list_characters',arguments:{}});
+  assert.equal(seen[0].url.origin,'https://external-mogen-staging.api.getcartwheel.com');
+  assert.equal(seen[0].options.redirect,'error');
+  for (const environment of ['https://attacker.example', 'dev', 'toString', '__proto__']) {
+    assert.throws(()=>createServer({apiKey:'test-key', environment}), /CARTWHEEL_ENVIRONMENT/);
+  }
+});
+
 test('package allowlist includes workflow sources and excludes secrets and rendered outputs', t => {
   const manifest=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
   assert.deepEqual(manifest.files,['src','LICENSE','README.md','examples/blender/*.py','examples/blender/README.md','examples/blender/assets/*.bvh','examples/comic4/*.mjs','examples/comic4/*.py','examples/comic4/README.md','examples/characters/*.mjs','examples/characters/README.md','examples/game/*.mjs','examples/game/*.html','examples/game/*.css','examples/game/*.json','examples/game/README.md','examples/game/ASSETS.md','examples/game/assets/*.glb','examples/game/assets/*.bvh','examples/game/assets/*.json','examples/game/*.py','examples/game/AUDIT.md','examples/game/assets/MHR-LICENSE.txt']);

@@ -62,6 +62,8 @@ For clients with a JSON `mcpServers` configuration, add the following. Replace t
 
 Use an absolute path: clients may launch the process from a different working directory. Restart or reconnect the client after changing its configuration.
 
+The server talks to Cartwheel's production API. To use a staging project key instead, also set `"CARTWHEEL_ENVIRONMENT": "staging"` in `env`.
+
 For **Codex**, add this to `~/.codex/config.toml` and make `CARTWHEEL_API_KEY` available in the environment that launches Codex:
 
 ```toml

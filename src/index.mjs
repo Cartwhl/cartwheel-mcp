@@ -3,7 +3,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createServer } from './server.mjs';
 
 try {
-  const server = createServer({ apiKey: process.env.CARTWHEEL_API_KEY });
+  const server = createServer({
+    apiKey: process.env.CARTWHEEL_API_KEY,
+    environment: process.env.CARTWHEEL_ENVIRONMENT || undefined,
+  });
   await server.connect(new StdioServerTransport());
 } catch (error) {
   console.error(error.message);
