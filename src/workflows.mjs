@@ -18,6 +18,8 @@ export const characterWorkflowUri = 'cartwheel://workflows/characters';
 export const characterWorkflowPrompt = 'create_rigged_character';
 export const robotWorkflowUri = 'cartwheel://workflows/robots';
 export const robotWorkflowPrompt = 'robot_motion_export';
+export const retargetingWorkflowUri = 'cartwheel://workflows/retargeting';
+export const retargetingWorkflowPrompt = 'character_retargeting';
 const workflows = [
   { uri: workflowUri, prompt: workflowPrompt, name: 'grounded_blender_workflow',
     title: 'Grounded Cartwheel → Blender',
@@ -43,6 +45,10 @@ const workflows = [
     title: 'Cartwheel → humanoid robot retarget and export',
     description: 'Find a robot character, solve motion against its physical model, and export qpos joint angles or mesh formats in the robot\'s native frame.',
     file: 'robots.md', directory: 'robots', argument: 'robot' },
+  { uri: retargetingWorkflowUri, prompt: retargetingWorkflowPrompt, name: 'retargeting_workflow',
+    title: 'Cartwheel → character retargeting and rig setup',
+    description: 'How motion is retargeted onto a character, how to set a model up so it retargets well, what its mapping holds, and how to work out what is wrong with a retarget.',
+    file: 'retargeting.md', directory: 'characters', argument: 'character' },
 ].map(w => ({ ...w, text: `${readFileSync(new URL(`./workflows/${w.file}`, import.meta.url), 'utf8')}\nInstalled example directory: ${fileURLToPath(new URL(`../examples/${w.directory}/`, import.meta.url))}\n` }));
 const invalid = message => new McpError(ErrorCode.InvalidParams, message);
 

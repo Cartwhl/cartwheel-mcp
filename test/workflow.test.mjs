@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/server.mjs';
-import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt, robotWorkflowUri, robotWorkflowPrompt } from '../src/workflows.mjs';
+import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt, robotWorkflowUri, robotWorkflowPrompt, retargetingWorkflowUri, retargetingWorkflowPrompt } from '../src/workflows.mjs';
 
 async function connect(t) {
   const server = createServer({ apiKey: 'workflow-test-key', fetchImpl: async () => assert.fail('Workflow discovery must not call the API') });
@@ -21,14 +21,25 @@ test('Blender workflow is discoverable and packaged files exist', async t => {
   assert.ok(capabilities.prompts);
   assert.ok(capabilities.resources);
   assert.match(client.getInstructions(), /grounded_blender_scene/);
-  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt,robotWorkflowPrompt]);
-  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri,robotWorkflowUri]);
+  assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt,robotWorkflowPrompt,retargetingWorkflowPrompt]);
+  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri,robotWorkflowUri,retargetingWorkflowUri]);
   const response = await client.readResource({ uri: workflowUri });
   const guide = response.contents[0].text;
   for (const term of ['Gaussian', 'source ankle rotation', 'verify_motion.py', 'render_examples.py', 'Generation consumes credits']) assert.ok(guide.includes(term), term);
   const directory = guide.match(/Installed example directory: (.+)/)[1];
   for (const file of ['motion.py','verify_motion.py','render_examples.py','assets/dance_0.bvh','assets/showcase_1.bvh']) await access(`${directory}/${file}`);
   assert.equal(JSON.stringify(response).includes('workflow-test-key'), false);
+});
+
+test('Retargeting workflow explains roles, chains, rig setup, twist chains and diagnosis', async t => {
+  const client = await connect(t);
+  assert.match(client.getInstructions(), /character_retargeting/);
+  const { contents } = await client.readResource({ uri: retargetingWorkflowUri });
+  const guide = contents[0].text;
+  for (const term of ['role_to_bone', 'chain_config', 'twist_chains', 'twist_chains_excluded', 'rest pose', 'Cartographer', 'get_character', 'cartwheel://workflows/robots']) assert.ok(guide.includes(term), term);
+  const prompt = await client.getPrompt({ name: retargetingWorkflowPrompt, arguments: { character: 'A rig whose wrists pinch' } });
+  assert.match(prompt.messages[0].content.text, /Character retargeting/);
+  assert.match(prompt.messages[1].content.text, /wrists pinch/);
 });
 
 test('Comic 4 workflow includes upload, all-actor export, facial and camera guidance', async t => {
