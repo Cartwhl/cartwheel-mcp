@@ -73,17 +73,43 @@ test('saving poses sends PUT and handles the API empty response, including clear
 });
 
 test('character selection cannot create an accidental scene reference or mutate an already matching one', async t => {
-  let objects = {}, posts = 0;
+  let objects = {}, posts = 0, pending = false;
+  const calls = [];
   const timeline = [{ jobID: 'motion-1', trimStart: 0.5, trimEnd: 3.5, appliedMotionEditJobID: 'edit-reviewed' }];
-  const client = await connect(t, async (_, options) => { if (options.method === 'POST') { posts++; assert.deepEqual(JSON.parse(options.body), { objectID: 'char-MHR', timeline }); } return Response.json({ objects }); });
+  const privateFields = { s3KeyBvh: 'private-storage-key', apiKey: 'secret-swing-edit-test', sceneSettings: { token: 'Bearer private' } };
+  const client = await connect(t, async (url, options) => {
+    calls.push([url.pathname, options.method]);
+    if (options.method === 'POST') {
+      posts++;
+      assert.deepEqual(JSON.parse(options.body), { objectID: 'char-MHR', timeline });
+      if (pending) return Response.json({ jobID: 'retarget-1', status: 'PROCESSING', ...privateFields }, { status: 202 });
+      objects.character.objectID = 'char-MHR';
+    }
+    return Response.json({ sceneID: slot.sceneID, objects, ...privateFields });
+  });
   const args = { sceneID: slot.sceneID, referenceName: slot.referenceName, objectID: 'char-MHR' };
   assert.equal((await client.callTool({ name: 'set_scene_character', arguments: args })).isError, true);
-  objects = { character: { objectID: 'char-MHR', timeline: timeline.map(item => ({ ...item, s3KeyBvh: 'private-storage-key', bvhURL: 'https://example.com/signed' })) } };
-  assert.equal((await client.callTool({ name: 'set_scene_character', arguments: args })).isError, false);
+  const safeTimeline = timeline.map(item => ({ ...item, bvhURL: 'https://assets.getcartwheel.com/motion.bvh' }));
+  const expected = { sceneID: slot.sceneID, objects: { character: { objectID: 'char-MHR', timeline: safeTimeline } } };
+  objects = { character: { objectID: 'char-MHR', ...privateFields, timeline: safeTimeline.map(item => ({ ...item, ...privateFields })) } };
+  const unchanged = await client.callTool({ name: 'set_scene_character', arguments: args });
+  assert.equal(unchanged.isError, false);
+  assert.deepEqual(JSON.parse(unchanged.content[0].text), expected);
   assert.equal(posts, 0);
+  assert.deepEqual(calls.splice(0), [['/scenes/scene-test', 'GET'], ['/scenes/scene-test', 'GET']]);
   objects.character.objectID = 'char-Axel';
-  assert.equal((await client.callTool({ name: 'set_scene_character', arguments: args })).isError, false);
+  const changed = await client.callTool({ name: 'set_scene_character', arguments: args });
+  assert.equal(changed.isError, false);
+  assert.deepEqual(JSON.parse(changed.content[0].text), expected);
   assert.equal(posts, 1);
+  assert.deepEqual(calls.splice(0), [['/scenes/scene-test', 'GET'], ['/scenes/scene-test/character', 'POST']]);
+  pending = true;
+  objects.character.objectID = 'char-Robot';
+  const processing = await client.callTool({ name: 'set_scene_character', arguments: args });
+  assert.equal(processing.isError, false);
+  assert.deepEqual(JSON.parse(processing.content[0].text), { jobID: 'retarget-1', status: 'PROCESSING' });
+  assert.equal(posts, 2);
+  assert.deepEqual(calls, [['/scenes/scene-test', 'GET'], ['/scenes/scene-test/character', 'POST']]);
 });
 
 test('scene export uses explicit settings and polling serializes reference filters without another mutation', async t => {

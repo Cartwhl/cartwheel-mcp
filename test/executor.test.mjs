@@ -160,6 +160,31 @@ test('persisted native poses above the write ceiling survive every scene/edit re
   assert.throws(() => projectToolOutput('list_motion_edits', huge), ResponseTooLargeError);
 });
 
+test('scene mutation results use the same safe scene projection as get_scene', async () => {
+  const raw = { sceneID: 'scene-1', sceneName: 'Review', objects: { character: {
+    objectID: 'character-1', storageKey: 'private/scene.json', timeline: [{
+      jobID: 'job-1', bvhURL: 'https://assets.getcartwheel.com/motion.bvh', storageKey: 'private/motion.bvh',
+      sceneSettings: { apiKey: 'SECRET', storageKey: 'private/settings.json' },
+    }],
+  } }, sceneSettings: { apiKey: 'SECRET', storageKey: 'private/scene-settings.json' }, s3Key: 'private/scene.json' };
+  const expected = projectToolOutput('get_scene', raw, ['SECRET']);
+  assert.deepEqual(expected.objects.character.timeline[0], {
+    jobID: 'job-1', bvhURL: 'https://assets.getcartwheel.com/motion.bvh',
+  });
+  for (const name of ['set_scene_character', 'apply_motion_edit']) {
+    assert.deepEqual(projectToolOutput(name, raw, ['SECRET']), expected, name);
+  }
+  assert.deepEqual(projectToolOutput('get_scene', raw, ['SECRET']), expected);
+  const pending = { jobID: 'retarget-1', status: 'PROCESSING' };
+  assert.deepEqual(projectToolOutput('set_scene_character', { ...pending, apiKey: 'SECRET', sceneSettings: raw.sceneSettings }, ['SECRET']), pending);
+  for (const invalid of [{ status: 'PROCESSING' }, { ...pending, jobID: '' }, { ...pending, jobID: 42 },
+    { ...pending, status: 'UNKNOWN' }, { jobID: 'retarget-1' }]) {
+    assert.throws(() => projectToolOutput('set_scene_character', invalid), /Invalid upstream data/);
+  }
+  assert.throws(() => projectToolOutput('apply_motion_edit', pending), /Invalid upstream data/);
+  assert.throws(() => projectToolOutput('set_scene_character', { ...pending, jobID: 'SECRET' }, ['SECRET']), /Credential reflection/);
+});
+
 test('canonical executor classifies byte overflow from native and injected transports, not arbitrary diagnostics', async () => {
   const page = { scenes: [] };
   assert.deepEqual(await executeTool('list_scenes', { limit: 1 }, { apiKey: 'SECRET',

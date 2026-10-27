@@ -58,6 +58,7 @@ const timeline = object({ jobID: string, generationType: string, variationNumber
 const sceneObject = object({ objectID: string, referenceName: string, timeline: array(timeline) }, ['objectID', 'timeline']);
 const scene = object({ sceneID: string, sceneName: string, type: string,
   objects: { type: 'object', additionalProperties: sceneObject } }, ['sceneID', 'objects']);
+const pendingSceneRetarget = object({ jobID: { ...string, minLength: 1 }, status: { const: 'PROCESSING' } }, ['jobID', 'status']);
 const edit = object({ jobID: string, status: string, operation: string, prompt: string, userKeyPoseCount: number,
   outputBvhURL: string, thumbnailUrl: string, keyPoses: outputKeyPoses }, ['jobID', 'status']);
 const exportsResult = object({ exports: array(object({ exportID: string, objectID: string, objectReferenceName: string,
@@ -76,6 +77,7 @@ const outputSchemas = {
   generate_motion: batch, get_batch: batch, list_batch_motions: motions,
   get_character: object(characterFields, ['characterID']),
   list_scenes: object({ scenes: array(scene), nextToken: string }, ['scenes']), get_scene: scene,
+  set_scene_character: { type: 'object', oneOf: [scene, pendingSceneRetarget] }, apply_motion_edit: scene,
   get_motion: object({ ...motionFields, motionID: string, sourceBvhURL: string, fbxURL: string, gltfURL: string }),
   search_motions: object({ items: array(object({ motionID: string, title: string, short: string, tags: array(string),
     categoryAndSubcategories: array(string), mp4URL: string, gifURL: string })), total: number, pageSize: number,
@@ -140,7 +142,10 @@ function projectToolOutput(name, value, secrets = []) {
     value = { ...value, items: value.items.map(item => normalizeMotion(item)) };
   }
   if (name === 'get_motion') value = normalizeMotion(value);
-  const output = schema ? project(value, schema) : value;
+  // MJCF character changes return an accepted retarget job rather than a scene.
+  const projectionSchema = name === 'set_scene_character'
+    ? (value?.status === 'PROCESSING' ? pendingSceneRetarget : scene) : schema;
+  const output = projectionSchema ? project(value, projectionSchema) : value;
   if (schema && !validators.get(name)(output)) throw new Error('Invalid upstream data');
   assertSafeOutput(output, secrets);
   return output;

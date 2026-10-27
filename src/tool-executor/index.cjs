@@ -101,11 +101,11 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
       const scene = await api(`/scenes/${encodeURIComponent(args.sceneID)}`);
       const target = scene.objects?.[args.referenceName];
       if (!target) throw new ToolInputError('The requested reference does not exist in this scene. No character was changed.');
-      if (target.objectID === args.objectID) return scene;
+      if (target.objectID === args.objectID) return projectToolOutput(name, scene, [apiKey]);
       if (!Array.isArray(target.timeline) || target.timeline.some(item => typeof item.jobID !== 'string' || !item.jobID.trim())) throw new ToolInputError('Scene timeline is incomplete. No character was changed.');
       const fields = ['jobID', 'generationType', 'variationNumber', 'outputNumber', 'title', 'trimStart', 'trimEnd', 'stitchStartDelay', 'stitchEndDelay', 'staticHands', 'appliedMotionEditJobID'];
       const timeline = target.timeline.map(item => Object.fromEntries(fields.filter(key => item[key] !== undefined).map(key => [key, item[key]])));
-      return await api(path, tool.method, { objectID: args.objectID, timeline });
+      return projectToolOutput(name, await api(path, tool.method, { objectID: args.objectID, timeline }), [apiKey]);
     }
     if (['get_motion_edit', 'apply_motion_edit'].includes(name)) {
       const history = await api(path.replace(/\/[^/]+(?:\/apply)?$/, ''));
