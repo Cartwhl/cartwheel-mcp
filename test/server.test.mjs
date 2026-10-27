@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { createServer, definitions } from '../src/server.mjs';
-import { viewerTool, viewerResourceUri, viewerResource, supportsViewerApp } from '../src/viewer.mjs';
+import { invokeViewer, viewerTool, viewerResourceUri, viewerResource, supportsViewerApp } from '../src/viewer.mjs';
 import { previewsTool, previewsResourceUri } from '../src/previews.mjs';
 
 async function connect(t, fetchImpl, capabilities = {}) {
@@ -255,6 +255,119 @@ test('local viewer negotiates MCP Apps and otherwise returns a private expiring 
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html'] } } }), false);
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: 'text/html;profile=mcp-app' } } }), false);
   assert.throws(() => viewerResource('https://evil.example'), /Viewer unavailable/);
+});
+
+const captureArgs = { batchID: 'batch-capture', motionID: 'motion-capture' };
+const captureBatch = { batchID: captureArgs.batchID, status: 'COMPLETED', numPeopleByMediaID: { 'media-1': 2 } };
+const captureMotion = { jobID: captureArgs.motionID, status: 'COMPLETED', sourceVideoMediaID: 'media-1',
+  bvhURL: 'https://bucket.s3.amazonaws.com/body0.bvh',
+  mhrBvhURLs: [0, 1].map(i => `https://bucket.s3.amazonaws.com/original-${i}.bvh?Signature=private`),
+  mhrIdentityJsonURLs: [0, 1].map(i => `https://resources.getcartwheel.com/identity-${i}.json?Signature=private`) };
+
+test('local capture preview resolves the exact paginated job and all original indexed pairs without processing', async t => {
+  for (const app of [false, true]) {
+    const calls = [];
+    const client = await connect(t, async (url, options) => {
+      calls.push(url);
+      assert.equal(options.method, 'GET');
+      assert.equal(url.searchParams.has('characterID'), false);
+      if (url.pathname === '/batch/batch-capture') return Response.json(captureBatch);
+      assert.equal(url.pathname, '/motions/batch-capture');
+      assert.equal(url.searchParams.get('limit'), '10');
+      return Response.json(url.searchParams.get('nextToken') === 'next-page'
+        ? { items: [captureMotion] } : { items: [{ ...captureMotion, jobID: 'another-motion' }], nextToken: 'next-page' });
+    }, app ? { extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] } } } : {});
+    const result = await client.callTool({ name: viewerTool.name, arguments: captureArgs });
+    assert.equal(result.isError, false);
+    assert.equal(calls.length, 3);
+    assert.equal(result.structuredContent.actorCount, 2);
+    assert.deepEqual(result.structuredContent.actorIDs, ['capture-0', 'capture-1']);
+    assert.equal(result.structuredContent.characterID, 'char-upload-MHR');
+    const url = new URL(result._meta.viewerUrl), fragment = new URLSearchParams(url.hash.slice(1));
+    assert.deepEqual([...fragment.keys()], ['actors']);
+    assert.deepEqual(JSON.parse(fragment.get('actors')), [0, 1].map(index => ({ actorId: `capture-${index}`,
+      bvhUrl: captureMotion.mhrBvhURLs[index], identityUrl: captureMotion.mhrIdentityJsonURLs[index],
+      characterName: 'MHR', motionName: captureArgs.motionID, retargetedMotion: false })));
+    if (app) assert.doesNotMatch(JSON.stringify([result.content, result.structuredContent]), /https:|Signature|private/);
+    else assert.equal(result.structuredContent.previewUrl, url.href);
+  }
+});
+
+test('capture preview fails atomically for missing, unsafe, incomplete or ambiguous actor outputs', async () => {
+  const cases = [
+    { mhrBvhURLs: undefined }, { mhrIdentityJsonURLs: undefined },
+    { mhrBvhURLs: [null, captureMotion.mhrBvhURLs[1]] },
+    { mhrIdentityJsonURLs: [captureMotion.mhrIdentityJsonURLs[0], null] },
+    { mhrBvhURLs: [captureMotion.mhrBvhURLs[0]] }, { mhrIdentityJsonURLs: [] },
+    ...['', 'https://evil.example/private', 'https://app.getcartwheel.com/private',
+      'https://bucket.s3.amazonaws.com/x#fragment', 'https://bucket.s3.amazonaws.com/x\n',
+      'https://user:pass@bucket.s3.amazonaws.com/x', 'http://bucket.s3.amazonaws.com/x']
+      .map(value => ({ mhrBvhURLs: [captureMotion.mhrBvhURLs[0], value] })),
+    { status: 'FAILED' }, { status: 'GENERATING' }, { jobID: 'wrong' },
+    { motionID: 'conflicting' }, { sourceVideoMediaID: 'unknown' }, { variations: [{}, {}] },
+    { mhrBvhURLs: Array(5).fill(captureMotion.mhrBvhURLs[0]) },
+    { mhrBvhURLs: captureMotion.mhrBvhURLs.map(url => url + 'x'.repeat(17000)) },
+  ];
+  for (const patch of cases) {
+    const calls = [];
+    const result = await invokeViewer(captureArgs, { invokeTool: async (name, args) => {
+      calls.push([name, args]);
+      return { structuredContent: name === 'get_batch' ? captureBatch : { items: [{ ...captureMotion, ...patch }] } };
+    } });
+    assert.equal(result.structuredContent.status, 'assets_unavailable', JSON.stringify(patch));
+    assert.equal(result._meta, undefined);
+    assert.equal(calls.length, 2);
+    assert.doesNotMatch(JSON.stringify(result), /https:|Signature|body0|pass@/);
+  }
+  for (const batch of [{ ...captureBatch, status: 'IN_PROGRESS' }, { ...captureBatch, batchID: 'wrong' },
+    { ...captureBatch, numPeopleByMediaID: undefined },
+    ...[0, 1, 3, 5, 1.5].map(count => ({ ...captureBatch, numPeopleByMediaID: { 'media-1': count } }))]) {
+    const result = await invokeViewer(captureArgs, { invokeTool: async name => ({ structuredContent:
+      name === 'get_batch' ? batch : { items: [captureMotion] } }) });
+    assert.equal(result.structuredContent.status, 'assets_unavailable');
+  }
+});
+
+test('capture preview accepts one through four complete actors and enforces the encoded fragment ceiling', async () => {
+  for (const count of [1, 4]) {
+    const motion = { ...captureMotion,
+      mhrBvhURLs: Array.from({ length: count }, (_, i) => `https://bucket.s3.amazonaws.com/${i}.bvh`),
+      mhrIdentityJsonURLs: Array.from({ length: count }, (_, i) => `https://bucket.s3.amazonaws.com/${i}.json`) };
+    const invoke = async () => invokeViewer(captureArgs, { invokeTool: async name => ({ structuredContent:
+      name === 'get_batch' ? { ...captureBatch, numPeopleByMediaID: { 'media-1': count } } : { items: [motion] } }) });
+    const result = await invoke();
+    assert.equal(result.isError, false);
+    assert.equal(result.structuredContent.actorCount, count);
+    const baseLength = new URL(result._meta.viewerUrl).hash.length;
+    motion.mhrBvhURLs[0] += 'x'.repeat(32768 - baseLength);
+    assert.equal(new URL((await invoke())._meta.viewerUrl).hash.length, 32768);
+    motion.mhrBvhURLs[0] += 'x';
+    const tooLong = await invoke();
+    assert.equal(tooLong.structuredContent.status, 'assets_unavailable');
+    assert.equal(tooLong._meta, undefined);
+  }
+});
+
+test('capture input is strict before API access and pagination is bounded without retries', async () => {
+  for (const args of [{ batchID: 'batch-capture' }, { ...captureArgs, characterID: 'char-upload-MHR' },
+    { ...captureArgs, actors: [] }, { ...captureArgs, bvhUrl: captureMotion.bvhURL },
+    { ...captureArgs, batchID: '../bad' }, { ...captureArgs, motionID: 'x'.repeat(257) },
+    { ...captureArgs, batchID: 'batch-capture\n' }]) {
+    const result = await invokeViewer(args, { invokeTool: () => assert.fail('Invalid input cannot fetch') });
+    assert.equal(result.isError, true);
+    assert.equal(JSON.parse(result.content[0].text).code, 'invalid_request');
+  }
+  for (const repeat of [false, true]) {
+    let pages = 0;
+    const result = await invokeViewer(captureArgs, { invokeTool: async name => ({ structuredContent:
+      name === 'get_batch' ? captureBatch : { items: [], nextToken: repeat ? 'same-token' : `page-${++pages}` } }) });
+    assert.equal(result.structuredContent.status, 'assets_unavailable');
+    if (!repeat) assert.equal(pages, 10);
+  }
+  const failure = { isError: true, content: [{ type: 'text', text: 'upstream failed' }] };
+  let calls = 0;
+  assert.equal(await invokeViewer(captureArgs, { invokeTool: async () => { calls++; return failure; } }), failure);
+  assert.equal(calls, 1);
 });
 
 test('preview presentation is discoverable without API calls and keeps media in UI-only metadata', async t => {

@@ -3,16 +3,21 @@ import { safeAsset } from './tool-executor/index.cjs';
 export const viewerResourceUri = 'ui://cartwheel/asset-viewer/v5.html';
 export const viewerTool = {
   name: 'view_character_motion',
-  description: 'Open a 3D preview, embedded in MCP Apps clients or as a private, expiring preview link in other clients. For a selected motion, calls get_motion once with the requested character to obtain its fitting BVH; this can run retarget processing. Omit the character for MHR; omit the motion for rest pose. Each call is self-contained and the host controls panel reuse. Opening does not confirm rendering; the app reports readiness or failure. Never generates a new motion, retries automatically or substitutes a character. Do not first request the same character-targeted get_motion just to open this preview.',
+  description: 'Open a 3D preview, embedded in MCP Apps clients or as a private, expiring preview link in other clients. To preview all original MHR performers from a completed video capture together, provide batchID and motionID, without characterID. This reads the known batch only (up to 10 pages of 10 records), requires every requested performer’s original BVH and identity, preserves capture indices and shared placement, and never retargets or generates. Otherwise, for a selected motion, calls get_motion once with the requested character to obtain its fitting BVH; this can run retarget processing. Omit the character for MHR; omit the motion for rest pose. Each call is self-contained and the host controls panel reuse. Opening does not confirm rendering; the app reports readiness or failure. Never generates a new motion, retries automatically or substitutes a character. Do not first request the same character-targeted get_motion just to open this preview.',
   inputSchema: { type: 'object', properties: {
     characterID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
     motionID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
-  }, additionalProperties: false },
+    batchID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
+  }, additionalProperties: false,
+    allOf: [{ if: { required: ['batchID'] }, then: { required: ['motionID'], not: { required: ['characterID'] } } }] },
   outputSchema: { type: 'object', properties: {
     status: { type: 'string', enum: ['opening', 'assets_unavailable'] },
     characterID: { type: 'string' }, motionID: { type: 'string' },
     retryable: { const: false },
     characterName: { type: 'string' }, motionName: { type: 'string' },
+    batchID: { type: 'string' }, actorCount: { type: 'integer', minimum: 1, maximum: 4 },
+    actorIDs: { type: 'array', minItems: 1, maxItems: 4, uniqueItems: true,
+      items: { type: 'string', pattern: '^capture-[0-3]$' } },
     previewUrl: { type: 'string', description: 'Private, expiring link; returned only for clients without MCP Apps.' },
   }, required: ['status', 'characterID', 'characterName', 'retryable'], additionalProperties: false },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -33,13 +38,15 @@ export function supportsViewerApp(capabilities) {
 // Invocation is authorized by the caller: API key locally, request-scoped OAuth in hosted.
 export async function invokeViewer(args, { environment = 'production', invokeTool, app = true } = {}) {
   if (!args || typeof args !== 'object' || Array.isArray(args) ||
-      Object.entries(args).some(([key, value]) => !['characterID', 'motionID'].includes(key) ||
-        typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value))) {
+      Object.entries(args).some(([key, value]) => !['characterID', 'motionID', 'batchID'].includes(key) ||
+        typeof value !== 'string' || /[\x00-\x1f\x7f]/.test(value) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) ||
+      (Object.hasOwn(args, 'batchID') && (!Object.hasOwn(args, 'motionID') || Object.hasOwn(args, 'characterID')))) {
     return { isError: true, content: [{ type: 'text', text: JSON.stringify({
       code: 'invalid_request', message: 'Invalid connector request.', retryable: false,
     }) }] };
   }
   const url = new URL('/asset-viewer.html', appOrigin(environment));
+  if (args.batchID) return invokeCaptureViewer(args, { url, invokeTool, app });
   const characterID = args.characterID ?? 'char-upload-MHR';
   const character = characterID !== 'char-upload-MHR'
     ? await invokeTool('get_character', { characterID }) : undefined;
@@ -83,6 +90,68 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
     // Temporary asset capabilities are for the UI, never embedded in a shared UI resource.
     _meta: { viewerUrl: url.href },
   };
+}
+
+async function invokeCaptureViewer({ batchID, motionID }, { url, invokeTool, app }) {
+  const identity = { batchID, motionID, motionName: motionID,
+    characterID: 'char-upload-MHR', characterName: 'MHR', retryable: false };
+  const unavailable = () => {
+    const structuredContent = { ...identity, status: 'assets_unavailable' };
+    return { isError: true, structuredContent, content: [{ type: 'text', text: JSON.stringify({ ...structuredContent,
+      message: 'All requested original MHR performer assets could not be verified within the batch preview limits. No preview was opened. Do not omit performers, regenerate, retarget or retry automatically.' }) }] };
+  };
+  const batch = await invokeTool('get_batch', { batchID });
+  if (batch.isError) return batch;
+  const data = batch.structuredContent;
+  if (data?.batchID !== batchID || data.status !== 'COMPLETED' || !data.numPeopleByMediaID) return unavailable();
+  // Batch pagination is job-based, not performer-based. Never enumerate the org
+  // or assume the desired job is the first result. Stop at the exact job ID.
+  const seen = new Set();
+  let nextToken;
+  for (let page = 0; page < 10; page++) {
+    const result = await invokeTool('list_batch_motions', { batchID, limit: 10, ...(nextToken ? { nextToken } : {}) });
+    if (result.isError) return result;
+    const listing = result.structuredContent;
+    if (!Array.isArray(listing?.items) || listing.items.length > 10) return unavailable();
+    const matches = listing.items.filter(item => (item?.jobID ?? item?.motionID) === motionID);
+    if (matches.length > 1) return unavailable();
+    if (matches.length === 1) {
+      const motion = matches[0];
+      const count = typeof motion.sourceVideoMediaID === 'string' && Object.hasOwn(data.numPeopleByMediaID, motion.sourceVideoMediaID)
+        ? data.numPeopleByMediaID[motion.sourceVideoMediaID] : undefined;
+      const bvhs = motion.mhrBvhURLs, identities = motion.mhrIdentityJsonURLs;
+      if (motion.status !== 'COMPLETED' || (motion.motionID && motion.motionID !== motionID) ||
+          (motion.variations && motion.variations.length > 1) ||
+          !Number.isInteger(count) || count < 1 || count > 4 ||
+          !Array.isArray(bvhs) || !Array.isArray(identities) || bvhs.length !== count || identities.length !== count) return unavailable();
+      const actors = [];
+      for (let index = 0; index < count; index++) {
+        // No filtering, fallback to primary bvhURL, or compaction of null slots.
+        if (!safeViewerAsset(bvhs[index]) || !safeViewerAsset(identities[index])) return unavailable();
+        actors.push({ actorId: `capture-${index}`, bvhUrl: bvhs[index], identityUrl: identities[index],
+          characterName: 'MHR', motionName: motionID, retargetedMotion: false });
+      }
+      url.hash = new URLSearchParams({ actors: JSON.stringify(actors) }).toString();
+      if (url.hash.length > 32768) return unavailable();
+      const structuredContent = { ...identity, status: 'opening', actorCount: count, actorIDs: actors.map(actor => actor.actorId),
+        ...(!app ? { previewUrl: url.href } : {}) };
+      return { isError: false, structuredContent,
+        content: [{ type: 'text', text: `Opening preview of all ${count} original MHR performers with ${motionID}. Rendering is not yet confirmed.${!app ? ` [Private, expiring preview link](${url.href})` : ''}` }],
+        _meta: { viewerUrl: url.href } };
+    }
+    nextToken = listing.nextToken;
+    if (!nextToken || typeof nextToken !== 'string' || seen.has(nextToken) || nextToken.length > 16384 || listing.hasMore === false) return unavailable();
+    seen.add(nextToken);
+  }
+  return unavailable();
+}
+
+// Match the frontend fragment boundary as well as the shared API asset boundary.
+function safeViewerAsset(value) {
+  if (typeof value !== 'string' || /[\x00-\x1f\x7f]/.test(value) || !safeAsset(value)) return false;
+  const url = new URL(value);
+  return !url.hash && (/^resources(?:-[a-z0-9-]+)?\.getcartwheel\.com$/.test(url.hostname) ||
+    /(?:^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname));
 }
 
 export function viewerResource(environment = 'production') {
@@ -219,6 +288,12 @@ window.addEventListener('message', event => {
     if (data?.status !== 'opening' || typeof data.characterID !== 'string' || typeof data.characterName !== 'string') throw new Error();
     current = {characterID:data.characterID,characterName:data.characterName};
     for (const key of ['motionID','motionName']) if (typeof data[key] === 'string') current[key] = data[key];
+    if (typeof data.batchID === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(data.batchID) &&
+        Number.isInteger(data.actorCount) && data.actorCount >= 1 && data.actorCount <= 4 &&
+        Array.isArray(data.actorIDs) && data.actorIDs.length === data.actorCount &&
+        data.actorIDs.every((id,index) => id === 'capture-' + index)) {
+      current.batchID = data.batchID; current.actorCount = data.actorCount; current.actorIDs = data.actorIDs;
+    }
     for (const key of ['variationID','outputIndex']) if (Number.isSafeInteger(data[key]) && data[key] >= 0) current[key] = data[key];
     // A new browsing context per result: old WindowProxy events cannot match.
     frame = document.createElement('iframe');
