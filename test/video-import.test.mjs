@@ -47,10 +47,14 @@ test('exact attachment trust boundary rejects alternate schemes, hosts, credenti
     'https://files%2eoaiusercontent.com/x', 'https://files.oaiusercontent.com\\@evil.example/x',
     'https://files.oaiusercontent.com/x#private', 'file:///tmp/video',
   ]) {
-    assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: 'unsupported_attachment_host' });
+    const expected = new URL(downloadURL).hostname === 'files.oaiusercontent.com' ? 'unsupported_attachment_url_format' : 'unsupported_attachment_host';
+    assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: expected });
     await assert.rejects(importVideo({ ...args, downloadURL }, {
       createUpload: () => assert.fail('No slot'), fetchImpl: () => assert.fail('No egress'),
-    }), { code: 'unsupported_attachment_host' });
+    }), { code: expected });
+  }
+  for (const downloadURL of [undefined, '', 'not a URL', 'https://x.example/with secret', 'https://x.example/' + 'a'.repeat(16000)]) {
+    assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: 'invalid_attachment_url' });
   }
   assert.throws(() => validateVideoImport({ ...args, duration: 31 }), { code: 'invalid_video_metadata' });
 });
