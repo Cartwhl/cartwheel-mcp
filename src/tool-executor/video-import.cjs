@@ -4,7 +4,9 @@ const { VideoImportError, sourceURL, downloadSource: safeDownloadSource } = requ
 const MAX_VIDEO_BYTES = 249_999_999;
 const types = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', avi: 'video/x-msvideo', mkv: 'video/x-matroska' };
 const uploadOrigins = new Set(['https://cartwheel-mogen-resources.s3.amazonaws.com',
-  'https://cartwheel-mogen-resources.s3.us-east-1.amazonaws.com']);
+  'https://cartwheel-mogen-resources.s3.us-east-1.amazonaws.com',
+  'https://cartwheel-mogen-resources-staging.s3.amazonaws.com',
+  'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com']);
 function fail(code, diagnosticHostname) { throw new VideoImportError(code, diagnosticHostname); }
 function validateVideoImport(args) {
   sourceURL(args?.downloadURL);

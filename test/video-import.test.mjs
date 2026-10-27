@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { importVideo as executeImport, validateVideoImport } from '../src/tool-executor/index.cjs';
+import { importVideo as executeImport, validateVideoImport, projectToolOutput } from '../src/tool-executor/index.cjs';
 
 // Stream/PUT unit fixtures; connection-policy coverage uses the real downloader
 // separately in video-source.test.mjs.
@@ -70,10 +70,20 @@ test('source-neutral validation rejects unsafe URLs before I/O', async () => {
 });
 
 test('successful import streams exact bytes and returns no private capabilities', async () => {
-  const fixture = transfer(source(['ab', 'cd', 'ef']));
-  assert.deepEqual(await fixture.run(), { uploaded: true, mediaID: 'media-test', bytes: 6 });
-  assert.equal(fixture.registered, 1);
-  assert.equal(fixture.calls.length, 2);
+  for (const hostname of ['cartwheel-mogen-resources.s3.amazonaws.com',
+    'cartwheel-mogen-resources.s3.us-east-1.amazonaws.com',
+    'cartwheel-mogen-resources-staging.s3.amazonaws.com',
+    'cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com']) {
+    const mediaUploadURL = `https://${hostname}/private?X-Amz-Signature=storage-secret`;
+    const upload = projectToolOutput('create_media_upload', {
+      mediaUploads: [{ ...slot.mediaUploads[0], mediaUploadURL }],
+    });
+    const fixture = transfer(source(['ab', 'cd', 'ef']), { upload });
+    assert.deepEqual(await fixture.run(), { uploaded: true, mediaID: 'media-test', bytes: 6 });
+    assert.equal(fixture.registered, 1);
+    assert.equal(fixture.calls.length, 2);
+    assert.equal(fixture.calls[1].url, mediaUploadURL);
+  }
 });
 
 test('unknown, invalid, oversized and encoded lengths fail before slot creation and cancel download', async () => {
@@ -107,11 +117,23 @@ test('false lengths and failed storage never claim success, retain safe slot ID,
 
 test('untrusted storage slots do not receive a PUT; upstream diagnostics never escape', async () => {
   for (const mediaUploadURL of ['https://attacker.example/x?X-Amz-Signature=x',
+    'https://untrusted-bucket.s3.us-east-1.amazonaws.com/x?X-Amz-Signature=x',
+    'https://cartwheel-mogen-resources-staging.s3.us-west-2.amazonaws.com/x?X-Amz-Signature=x',
+    'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com.attacker.example/x?X-Amz-Signature=x',
+    'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com:444/x?X-Amz-Signature=x',
+    'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com/x',
+    'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com/x?X-Amz-Signature=',
     'https://cartwheel-mogen-resources.s3.amazonaws.com/x',
     'http://cartwheel-mogen-resources.s3.amazonaws.com/x?X-Amz-Signature=x',
     'https://secret@cartwheel-mogen-resources.s3.amazonaws.com/x?X-Amz-Signature=x']) {
     const fixture = transfer(source(['abcdef']), { upload: { mediaUploads: [{ ...slot.mediaUploads[0], mediaUploadURL }] } });
     assert.equal((await fixture.run()).code, 'invalid_upload_slot');
+    assert.equal(fixture.calls.length, 1);
+  }
+  for (const extension of [undefined, 'mov']) {
+    const fixture = transfer(source(['abcdef']), { upload: { mediaUploads: [{ ...slot.mediaUploads[0],
+      extension, mediaUploadURL: 'https://cartwheel-mogen-resources-staging.s3.us-east-1.amazonaws.com/private?X-Amz-Signature=storage-secret' }] } });
+    assert.deepEqual(await fixture.run(), { uploaded: false, code: 'invalid_upload_slot', mediaID: 'media-test' });
     assert.equal(fixture.calls.length, 1);
   }
   const result = await importVideo(args, { createUpload: () => assert.fail(), fetchImpl: async () => {
