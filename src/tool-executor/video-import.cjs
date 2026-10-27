@@ -1,25 +1,13 @@
 const { Readable } = require('node:stream');
+const { VideoImportError, sourceURL, downloadSource: safeDownloadSource } = require('./video-source.cjs');
 
 const MAX_VIDEO_BYTES = 249_999_999;
 const types = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', avi: 'video/x-msvideo', mkv: 'video/x-matroska' };
 const uploadOrigins = new Set(['https://cartwheel-mogen-resources.s3.amazonaws.com',
   'https://cartwheel-mogen-resources.s3.us-east-1.amazonaws.com']);
-class VideoImportError extends Error {
-  constructor(code, diagnosticHostname) {
-    super(code); this.code = code;
-    if (diagnosticHostname) this.diagnosticHostname = diagnosticHostname;
-  }
-}
 function fail(code, diagnosticHostname) { throw new VideoImportError(code, diagnosticHostname); }
 function validateVideoImport(args) {
-  if (typeof args?.downloadURL !== 'string' || args.downloadURL.length > 16000 || /[\x00-\x20\x7f]/.test(args.downloadURL)) fail('invalid_attachment_url');
-  let url;
-  try { url = new URL(args.downloadURL); } catch { fail('invalid_attachment_url'); }
-  const diagnosticHostname = /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(url.hostname) &&
-    url.hostname.length <= 253 ? url.hostname : undefined;
-  if (url.hostname !== 'files.oaiusercontent.com') fail('unsupported_attachment_host', diagnosticHostname);
-  if (url.origin !== 'https://files.oaiusercontent.com' || url.username || url.password || args.downloadURL.includes('#') ||
-      !/^https:\/\/files\.oaiusercontent\.com\//.test(args.downloadURL)) fail('unsupported_attachment_url_format', 'files.oaiusercontent.com');
+  sourceURL(args?.downloadURL);
   if (typeof args.extension !== 'string' || !Object.hasOwn(types, args.extension) || !Number.isFinite(args.duration) || args.duration <= 0 || args.duration > 30 ||
       (args.name !== undefined && (typeof args.name !== 'string' || args.name.length > 200 || !/\S/.test(args.name) || /[\x00-\x1f\x7f]/.test(args.name))) ||
       (args.resolution !== undefined && (typeof args.resolution !== 'string' || !/^[1-9][0-9]{0,5}x[1-9][0-9]{0,5}$/.test(args.resolution) || /\s/.test(args.resolution)))) fail('invalid_video_metadata');
@@ -41,9 +29,9 @@ async function wait(promise, signal) {
 function cancel(body) { void body?.cancel().catch(() => {}); }
 
 // createUpload is a backend-owned callback to the existing create_media_upload
-// executor. No API credential is accepted by, or forwarded through, fetchImpl.
+// executor. Source and storage transports never receive API credentials.
 async function importVideo(args, { createUpload, fetchImpl = globalThis.fetch, signal,
-  timeoutMs = 38_000 } = {}) {
+  downloadSource = safeDownloadSource, timeoutMs = 38_000 } = {}) {
   const media = validateVideoImport(args);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 38_000) fail('invalid_import_deadline');
   const controller = new AbortController();
@@ -56,8 +44,7 @@ async function importVideo(args, { createUpload, fetchImpl = globalThis.fetch, s
   const check = () => { if (controller.signal.aborted || Date.now() >= deadline) fail('import_cancelled'); };
   try {
     check();
-    const pending = fetchImpl(args.downloadURL, { method: 'GET', redirect: 'error',
-      headers: { 'Accept-Encoding': 'identity' }, signal: controller.signal });
+    const pending = downloadSource(args.downloadURL, { signal: controller.signal });
     // Dispose a late response even if a custom transport ignores cancellation.
     void pending.then(response => { if (controller.signal.aborted) cancel(response.body); }, () => {});
     const response = await wait(pending, controller.signal);

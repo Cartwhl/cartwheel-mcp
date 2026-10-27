@@ -46,22 +46,37 @@ The caller owns authentication, exposure, client metadata and sanitized errors;
 it must preserve canonical tool definitions rather than redefine their semantics.
 Credentials are caller-supplied; this module does not discover credentials or cache keys.
 
-## Streaming video attachment import
+## Source-neutral streaming video import
 
 `validateVideoImport({ downloadURL, extension, duration, name?, resolution? })`
-validates metadata and the exact attachment URL boundary before credential lookup.
-`importVideo(input, { createUpload, fetchImpl?, signal?, timeoutMs? })` composes a
+validates metadata and the HTTPS source URL boundary before credential lookup.
+`importVideo(input, { createUpload, fetchImpl?, downloadSource?, signal?, timeoutMs? })` composes a
 download with `createUpload({ media: [metadata] }, signal)` and a streaming PUT.
 The adapter supplies that callback using the unchanged `create_media_upload`
 executor. No generation is submitted. API keys belong only in the callback's
 fixed-origin API execution, never download or storage headers.
 
-The initial attachment allowlist is **only `https://files.oaiusercontent.com`**,
-with no credentials, fragments, redirects, alternate ports or subdomains.
-OpenAI's [network guidance](https://help.openai.com/en/articles/9247338-network-recommendations-for-chatgpt-errors-on-web-and-apps)
-identifies this file host (including its upload-error screenshot); this establishes
-OpenAI use, not an exhaustive attachment download contract. Other legitimate
-ChatGPT hosts are deliberately rejected as `unsupported_attachment_host`.
+Sources are untrusted regardless of the client or authentication. Any HTTPS host
+can supply bytes, including ChatGPT's Azure attachment hosts and other clients'
+sources. Only port 443 is accepted (explicit `:443` is allowed); URL credentials,
+fragments and redirects are rejected. Literal IPs and **every** DNS answer must
+be public: private, loopback, link-local/metadata, multicast, reserved and
+special-purpose addresses are rejected, including IPv4 aliases and IPv6 mapped
+or translation forms. Mixed public/private DNS answers fail closed.
+
+The built-in Node HTTPS source transport validates DNS inside its controlled
+lookup and hands one validated address directly to that same TLS connection.
+Each download uses its own cancellable DNS Resolver for A and AAAA, with no
+workerpool `getaddrinfo` or OS-lookup fallback. Both families must finish before
+selection; only `ENODATA` means an absent family. All other DNS errors fail closed
+and cancel pending sibling queries. Abort/deadline cancels the native DNS requests
+as well as the HTTPS connection, so cancelled imports cannot accumulate DNS work.
+It keeps the original hostname for SNI, certificate verification and Host, uses
+no pooled agent or secondary DNS/fallback, never follows redirects and does not
+use proxy environment variables. This avoids resolve-then-fetch rebinding/TOCTOU
+without another dependency. `fetchImpl` handles only storage PUTs; the separate
+`downloadSource` backend test seam must preserve this policy if replaced. Neither
+transport accepts API/OAuth credentials. No local source-URL tool is exposed.
 Storage is limited to the same two exact Cartwheel S3 origins used by the existing
 client-run video uploader, with a signed URL and matching extension required.
 
@@ -71,7 +86,7 @@ media registration; this avoids S3's incompatibility with unknown-length chunked
 PUTs. No buffering to disk or whole-file memory is used. The byte-counting stream
 holds the last chunk until EOF, rejects length mismatches, propagates backpressure,
 and sends an explicit Content-Length with Node fetch's `duplex: 'half'`.
-Validation applies to the HTTP entity exposed by fetch, not bytes outside HTTP
+Validation applies to the HTTP entity exposed by the transport, not bytes outside HTTP
 Content-Length framing. Duration (0 < seconds <= 30) and optional resolution are
 caller-declared metadata; no binary probing or video-content verification occurs.
 

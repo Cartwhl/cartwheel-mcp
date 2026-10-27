@@ -2,7 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { importVideo, validateVideoImport } from '../src/tool-executor/index.cjs';
+import { importVideo as executeImport, validateVideoImport } from '../src/tool-executor/index.cjs';
+
+// Stream/PUT unit fixtures; connection-policy coverage uses the real downloader
+// separately in video-source.test.mjs.
+function importVideo(input, options) {
+  return executeImport(input, { ...options, downloadSource: (url, init) =>
+    options.fetchImpl(url, { ...init, method: 'GET', redirect: 'error', headers: { 'Accept-Encoding': 'identity' } }) });
+}
 
 const args = { downloadURL: 'https://files.oaiusercontent.com/private?sig=download-secret', extension: 'mp4', duration: 12 };
 const slot = { mediaUploads: [{ mediaID: 'media-test', extension: 'mp4',
@@ -37,26 +44,29 @@ function transfer(download, { upload = slot, putStatus = 200, timeoutMs, signal 
   };
 }
 
-test('exact attachment trust boundary rejects alternate schemes, hosts, credentials and URL tricks before I/O', async () => {
+test('source-neutral validation rejects unsafe URLs before I/O', async () => {
   for (const downloadURL of [
-    'https://files.oaiusercontent.com.evil.example/x', 'https://evil.files.oaiusercontent.com/x',
-    'https://oaiusercontent.com/x', 'https://files.oaiusercontent.com./x',
-    'https://files.oaiusercontent.com:444/x', 'https://files.oaiusercontent.com:443/x',
+    'https://files.oaiusercontent.com:444/x',
     'https://user:secret@files.oaiusercontent.com/x', 'http://files.oaiusercontent.com/x',
     'https://127.0.0.1/x', 'https://[::1]/x', 'http://169.254.169.254/latest',
-    'https://files%2eoaiusercontent.com/x', 'https://files.oaiusercontent.com\\@evil.example/x',
+    'https://files.oaiusercontent.com\\@evil.example/x',
     'https://files.oaiusercontent.com/x#private', 'file:///tmp/video',
   ]) {
-    const expected = new URL(downloadURL).hostname === 'files.oaiusercontent.com' ? 'unsupported_attachment_url_format' : 'unsupported_attachment_host';
+    const expected = downloadURL.includes('\\') ? 'invalid_source_url' :
+      ['127.0.0.1', '[::1]'].includes(new URL(downloadURL).hostname) ? 'unsafe_source_address' : 'unsafe_source_url';
     assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: expected });
     await assert.rejects(importVideo({ ...args, downloadURL }, {
       createUpload: () => assert.fail('No slot'), fetchImpl: () => assert.fail('No egress'),
     }), { code: expected });
   }
   for (const downloadURL of [undefined, '', 'not a URL', 'https://x.example/with secret', 'https://x.example/' + 'a'.repeat(16000)]) {
-    assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: 'invalid_attachment_url' });
+    assert.throws(() => validateVideoImport({ ...args, downloadURL }), { code: 'invalid_source_url' });
   }
   assert.throws(() => validateVideoImport({ ...args, duration: 31 }), { code: 'invalid_video_metadata' });
+  for (const downloadURL of ['https://oaisdmntprpolandcentral.blob.core.windows.net/video?sig=private',
+    'https://other-client.example/video', 'https://files.oaiusercontent.com:443/video']) {
+    assert.equal(validateVideoImport({ ...args, downloadURL }).extension, 'mp4');
+  }
 });
 
 test('successful import streams exact bytes and returns no private capabilities', async () => {
