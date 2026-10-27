@@ -122,5 +122,5 @@ async function executeTool(name, args, { apiKey, environment = 'production', fet
     throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
 }
-module.exports = { definitions, origins, ToolInputError, toolRequest, executeTool, keyPose,
+module.exports = { ...require('./video-import.cjs'), definitions, origins, ToolInputError, toolRequest, executeTool, keyPose,
   isProcessingTool, projectToolOutput, safeAsset, JSON_LIMIT, withinJSONLimit, ResponseTooLargeError, SceneListTooLargeError };
