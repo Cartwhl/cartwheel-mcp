@@ -46,11 +46,13 @@ const workflows = [
 ].map(w => ({ ...w, text: `${readFileSync(new URL(`./workflows/${w.file}`, import.meta.url), 'utf8')}\nInstalled example directory: ${fileURLToPath(new URL(`../examples/${w.directory}/`, import.meta.url))}\n` }));
 const invalid = message => new McpError(ErrorCode.InvalidParams, message);
 
-export function registerWorkflows(server) {
+export function registerWorkflows(server, additionalResources = []) {
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: workflows.map(w => ({
     uri: w.uri, name: w.name, title: w.title, description: w.description, mimeType: 'text/markdown',
-  })) }));
+  })).concat(additionalResources.map(({ uri, name, mimeType }) => ({ uri, name, mimeType }))) }));
   server.setRequestHandler(ReadResourceRequestSchema, async ({ params }) => {
+    const resource = additionalResources.find(resource => resource.uri === params.uri);
+    if (resource) return { contents: [resource.read()] };
     const w = workflows.find(w => w.uri === params.uri);
     if (!w) throw invalid('Unknown Cartwheel resource');
     return { contents: [{ uri: w.uri, mimeType: 'text/markdown', text: w.text }] };
