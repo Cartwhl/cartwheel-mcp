@@ -371,6 +371,10 @@ Tests use the official MCP client, in-memory transports, and a real stdio subpro
 
 [`@cartwhl/mcp-server/tool-executor`](src/tool-executor/README.md) exposes the reusable runtime, catalog and constraints from this existing package, with no separate workspace or publication. It supports CommonJS and ESM; existing package file subpaths remain supported. The npm 0.7.0 release predates this export: consumers need an immutable source commit until a published version includes it. Keep contracts aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The local server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
 
+The separate [hosted MCP service](https://github.com/Cartwhl/cartwheel-mcp-hosted)
+reuses this executor behind OAuth/HTTP. Its [reviewer overview](https://github.com/Cartwhl/cartwheel-mcp-hosted/blob/main/docs/OVERVIEW.md)
+covers example flows, companion repos and hosted capability/verification status.
+
 ## Distribution
 
 This GitHub repository is the source distribution and installation entry point. It is not itself a hosted MCP service. The npm manifest is ready for packaging, but this README does not claim an npm release or MCP Registry listing.

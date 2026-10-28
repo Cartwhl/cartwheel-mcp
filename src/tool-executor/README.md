@@ -1,13 +1,63 @@
 # Reusable tool executor
 
-The existing `@cartwhl/mcp-server` package exposes `@cartwhl/mcp-server/tool-executor`
-to both CommonJS `require` and ESM named imports. It has no separate build or release.
-Existing package file subpaths remain available for compatibility.
+The existing `@cartwhl/mcp-server` package exposes the reusable executor as
+`@cartwhl/mcp-server/tool-executor` for CommonJS and ESM consumers. It shares
+the local server's canonical tool definitions, validation, execution and safe
+output handling; it does not create a separate package or release. The local
+stdio server and its [workflow resources](../workflows/) remain available.
 
-Exports: `definitions` (all 32 local tools), `toolRequest`, `executeTool`,
-`ToolInputError`, `origins`, and the shared `keyPose` schema. Safety exports are
-`projectToolOutput`, `safeAsset`, `JSON_LIMIT`, `withinJSONLimit`, and
-`isProcessingTool(name, args)`.
+```js
+import { executeTool, definitions } from '@cartwhl/mcp-server/tool-executor';
+
+const tools = definitions; // Use these canonical definitions in the adapter.
+const result = await executeTool('list_characters', {}, {
+  apiKey: process.env.CARTWHEEL_API_KEY,
+  environment: 'production', // or 'staging'
+});
+```
+
+`executeTool(name, args, options)` validates inputs, calls only fixed staging or
+production API origins, rejects redirects, enforces a 1 MiB JSON response cap,
+projects normal API outputs, and never automatically retries. Options include
+`apiKey`, `environment`, `signal`, `timeoutMs`, `fetchImpl`, optional
+`requestJSON(url, init, remainingMs)`, `createdByUser`, and `specialHandler`; `analyze_motion` requires
+a caller-provided local special handler. The caller owns authentication,
+exposure allowlists, client metadata and sanitized error handling. Preserve the
+canonical definitions and semantics; annotations are not an exposure policy.
+Credentials are passed by the caller and are neither discovered nor cached.
+Injected `requestJSON` must enforce its own body/deadline bounds; special handlers
+must preserve output safety. One deadline covers preflight and execution. Some
+synchronous operations require at least 240 seconds; hosted adapters must enforce
+their shorter overall deadline.
+`toolRequest(name, args)` returns the validated `{ tool, args, path, body }`.
+Other exports include `ToolInputError`, `origins`, `keyPose`,
+`projectToolOutput`, `safeAsset`, `JSON_LIMIT`, `withinJSONLimit`,
+`isProcessingTool`, and response-size error types.
+
+For hosted MCP architecture and current integration guidance, see the
+[hosted MCP overview](https://github.com/Cartwhl/cartwheel-mcp-hosted/blob/main/docs/OVERVIEW.md)
+and [hosted service repository](https://github.com/Cartwhl/cartwheel-mcp-hosted).
+
+This source checkout includes source-neutral HTTPS video import support. It
+validates untrusted source URLs, requires public DNS answers, rejects redirects,
+and streams bounded video bytes into the existing signed-upload flow. The
+source URL is never sent to Cartwheel with the API key. This does not expose a
+local source-URL tool or submit generation. These changes are in the current
+source tree and are not part of npm 0.7.0; consumers need a source commit
+containing them until a release is published.
+
+`importVideo(input, options)` and `validateVideoImport(input)` take `downloadURL`,
+`extension`, declared `duration`, optional `name`/`resolution`; the caller supplies
+authorized `createUpload({ media: [metadata] }, signal)`. Import uses public-only DNS validation
+and connection pinning with hostname TLS verification, not a hostname allowlist.
+It rejects private/mixed addresses, redirects, non-443 HTTPS and URL credentials.
+Storage is restricted to the production/staging media S3 buckets' exact global
+and `us-east-1` regional HTTPS origins. Known unencoded
+positive Content-Length <250 MB and duration ≤30s are required. Complete source
+bytes, consumed upload body and storage 2xx before deadline are all required for
+`uploaded:true`; an error's mediaID is not confirmation. No generation or retry.
+
+## Output and processing contracts
 
 `ResponseTooLargeError` is the safe byte-overflow signal for injected transports.
 The canonical executor converts it to `SceneListTooLargeError` for `list_scenes`;
@@ -25,36 +75,30 @@ MHR GLB has 127 skin joints and 56 leaves (183 entries with leaf End Sites); its
 prepared body BVHs have 127 entries. Those assets do not define a maximum for
 saved native editor snapshots. The reported saved MHR poses exceed 256, so 512
 doubles the previous read ceiling to provide bounded headroom without claiming an
-exact original pose count or unlimited custom-rig support. The 300-pose limit, numeric/vector bounds, credential
-and URL safety, and aggregate 1 MiB cap remain in force. Reading a pose does not
-imply that the write tools accept it unchanged.
-
-`toolRequest(name, args)` validates catalog schemas and semantic constraints, then
-returns `{ tool, args, path, body }`. `executeTool(name, args, options)` uses fixed
-staging/production API origins and forbids redirects. Options supply `apiKey`,
-`environment` (default production), `createdByUser`, `signal`, `timeoutMs`,
-`fetchImpl`, optional `requestJSON(url, init, remainingMs)`, and `specialHandler`.
-One deadline covers preflight checks and execution. Some local long operations
-require at least 240 seconds. `analyze_motion` needs a local special handler.
+exact original pose count or unlimited custom-rig support. The 300-pose limit,
+numeric/vector bounds, credential and URL safety, and aggregate 1 MiB cap remain
+in force. Reading a pose does not imply that write tools accept it unchanged.
 
 The catalog owns input bounds, descriptions, annotations and supported output schemas.
 The executor bounds JSON responses to 1 MiB, projects cataloged outputs, validates
 signed asset hosts, preserves ordered multi-actor slots, and rejects API-key/Bearer
 reflection. `projectToolOutput` is also exported for adapters and accepts extra
 secrets to reject. Injected transports must enforce the same byte bound before parsing.
-The caller owns authentication, exposure, client metadata and sanitized errors;
-it must preserve canonical tool definitions rather than redefine their semantics.
-Credentials are caller-supplied; this module does not discover credentials or cache keys.
 
-## Source-neutral streaming video import
+`get_motion` accepts its existing `characterID`, `downloadType`, `fps` and `bodyIndex`
+arguments. Its conservative annotations acknowledge synchronous retarget processing.
+`isProcessingTool` classifies a status-only call as a read and a call with `characterID`
+as processing, so transports can budget correctly without guessing from HTTP GET.
+The default retarget deadline is 35 seconds; explicit caller deadlines remain honored.
+Adapters must report uncertain processing outcomes without automatic retries.
+Hosted release exposure remains a separate explicit allowlist, not an annotation filter.
 
-`validateVideoImport({ downloadURL, extension, duration, name?, resolution? })`
-validates metadata and the HTTPS source URL boundary before credential lookup.
-`importVideo(input, { createUpload, fetchImpl?, downloadSource?, signal?, timeoutMs? })` composes a
-download with `createUpload({ media: [metadata] }, signal)` and a streaming PUT.
-The adapter supplies that callback using the unchanged `create_media_upload`
-executor. No generation is submitted. API keys belong only in the callback's
-fixed-origin API execution, never download or storage headers.
+## Video transport safety contract
+
+`validateVideoImport` validates metadata and the HTTPS source URL boundary before
+credential lookup. The upload callback is `createUpload({ media: [metadata] }, signal)`
+using the unchanged `create_media_upload` executor. API keys belong only in that
+callback's fixed-origin API execution, never download or storage headers.
 
 Sources are untrusted regardless of the client or authentication. Any HTTPS host
 can supply bytes, including ChatGPT's Azure attachment hosts and other clients'
@@ -77,8 +121,7 @@ use proxy environment variables. This avoids resolve-then-fetch rebinding/TOCTOU
 without another dependency. `fetchImpl` handles only storage PUTs; the separate
 `downloadSource` backend test seam must preserve this policy if replaced. Neither
 transport accepts API/OAuth credentials. No local source-URL tool is exposed.
-Storage is limited to the same two exact Cartwheel S3 origins used by the existing
-client-run video uploader, with a signed URL and matching extension required.
+Storage requires a signed URL and matching extension.
 
 Download must be HTTP 200, unencoded, non-partial, with a positive integer
 Content-Length of at most 249,999,999 bytes. Missing/invalid length fails before
@@ -104,17 +147,11 @@ No signed URL or raw transport diagnostic is returned. Invalid input throws
 `VideoImportError` before any I/O. The local catalog and
 `examples/comic4/upload-video.mjs` retain their existing client-run flow.
 
-`get_motion` accepts its existing `characterID`, `downloadType`, `fps` and `bodyIndex`
-arguments. Its conservative annotations acknowledge synchronous retarget processing.
-`isProcessingTool` classifies a status-only call as a read and a call with `characterID`
-as processing, so transports can budget correctly without guessing from HTTP GET.
-The default retarget deadline is 35 seconds; explicit caller deadlines remain honored.
-Adapters must report uncertain processing outcomes without automatic retries.
-Hosted release exposure remains a separate explicit allowlist, not an annotation filter.
-
 Catalogs and shared constraints live here; parent `.mjs` modules retain their local
-imports as re-exports. Run `npm ci`, `npm test`, and `npm run check:package` at root.
+imports as re-exports. Existing package file subpaths remain available.
+The current shared source pin is `397262a9ba38ef06fe4c3f09d2e5b5d473664c2f`;
+npm 0.7.0 predates this subpath. Until a release includes it, consumers must pin
+an immutable repository commit containing this module. The unchanged manifest
+version does not mean npm 0.7.0 contains this API.
 
-The npm 0.7.0 release predates this subpath. Until a release includes it, consumers
-must pin an immutable public repository commit containing this module. Do not
-assume the unchanged manifest version means npm 0.7.0 contains this API.
+Run `npm ci`, `npm test`, and `npm run check:package` at the repository root.
