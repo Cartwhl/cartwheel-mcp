@@ -163,7 +163,7 @@
     "name": "generate_motion",
     "method": "POST",
     "path": "/motion/fromText",
-    "description": "Generates motion animation based on text prompts.\nReturns a batch ID for tracking the generation progress. Consumes generation credits. Submit once, then use get_batch and list_batch_motions to poll; do not resubmit to check progress.",
+    "description": "Generates motion animation based on text prompts. Consumes generation credits. Submit once and retain the returned batchID: acceptance is an intermediate step, not completion of the user's generation request. Continue checking get_batch until terminal success or failure, spacing checks using estimatedSecondsWaitTime when available rather than a tight loop. Then retrieve all pages of list_batch_motions, inspect individual successes and failures, and present the available results and requested previews. Never resubmit to check progress. If client execution limits require stopping while pending, explicitly say monitoring paused, retain the batchID and explain how to resume checking the existing batch; do not imply background monitoring.",
     "parameters": [],
     "inputSchema": {
       "type": "object",
@@ -818,7 +818,7 @@
     "name": "list_batch_motions",
     "method": "GET",
     "path": "/motions/{batchID}",
-    "description": "Retrieves a paginated list of motion generations for a specific batch.\nReturns motion generation records with presigned URLs for BVH files and preview videos. Comic 4 items include ordered per-person body, face, identity and export arrays plus the captured camera when available. Preserve null slots. get_motion does not replace this complete batch listing.",
+    "description": "Retrieves a paginated list of motion generations for a specific batch. After get_batch reaches a terminal status, retrieve every page to inspect individual successes and failures and present the available results and requested previews. If requested outputs are still pending, continue spaced status/output checks within client execution limits; never regenerate to obtain results. Returns motion generation records with presigned URLs for BVH files and preview videos. Comic 4 items include ordered per-person body, face, identity and export arrays plus the captured camera when available. Retrieve and present every captured performer using its original index; preserve null slots and report missing or failed outputs rather than discarding actors. get_motion does not replace this complete batch listing.",
     "parameters": [
       {
         "name": "batchID",
@@ -869,7 +869,7 @@
     "name": "get_batch",
     "method": "GET",
     "path": "/batch/{batchID}",
-    "description": "Retrieves batch details including status and progress. Use for motion batches and character batches created by generate_character_batch. For character batches, follow with list_batch_characters to inspect every individual outcome.",
+    "description": "Retrieves batch details including status and progress. Use for motion batches and character batches created by generate_character_batch. A pending status such as IN_PROGRESS is not a completed generation request: continue checking until terminal success or failure within client execution limits. Space checks using estimatedSecondsWaitTime when available; avoid tight loops. After a terminal status, use list_batch_motions for motion batches or list_batch_characters for character batches and inspect every individual outcome. Never resubmit generation to check progress. If execution limits require stopping, explicitly report that monitoring paused, retain the batchID and explain how to resume checking it; do not imply background monitoring.",
     "parameters": [
       {
         "name": "batchID",
@@ -995,7 +995,7 @@
     "name": "generate_motion_from_video",
     "method": "POST",
     "path": "/motion/fromVideo",
-    "description": "Capture editable body, hand and optional face performance from uploaded videos using Comic 4. Supports 1–4 people per video. Requires uploaded media IDs and complete export settings. Consumes credits: submit once, then poll get_batch and list_batch_motions. Preserve every actor's ordered exports, MHR face/body assets and camera from list_batch_motions. Use get_motion with characterID and bodyIndex for a particular actor's body retarget. Keep moveInPlace false to preserve interactions and shared world placement.",
+    "description": "Capture editable body, hand and optional face performance from uploaded videos using Comic 4. Supports 1–4 people per video. Requires uploaded media IDs and complete export settings. Consumes credits: submit once and retain the batchID. Acceptance is an intermediate step, not completion of the user's generation request. Continue checking get_batch until terminal success or failure, spacing checks using estimatedSecondsWaitTime when available rather than a tight loop. Then retrieve every page of list_batch_motions, inspect individual successes and failures, and present every captured performer's available results and requested previews using its original index. Preserve ordered exports, null slots, MHR face/body assets and camera. Use get_motion with characterID and bodyIndex for a particular actor's body retarget. Keep moveInPlace false to preserve interactions and shared world placement. Never resubmit to check progress. If client execution limits require stopping while pending, explicitly say monitoring paused, retain the batchID and explain how to resume checking the existing batch; do not imply background monitoring.",
     "parameters": [],
     "inputSchema": {
       "type": "object",
