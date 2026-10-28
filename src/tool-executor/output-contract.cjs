@@ -73,6 +73,9 @@ const categoryInformation = array(object({ category: string, docCount: number,
   subcategories: array(object({ subcategory: string, docCount: number,
     tags: array(object({ tag: string, docCount: number })) })) }));
 const outputSchemas = {
+  get_account: object({ planType: string, currentCredits: number,
+    allowedNumBatches: { type: 'integer' }, allowedNumBatchSize: { type: 'integer' } },
+  ['planType', 'currentCredits', 'allowedNumBatches', 'allowedNumBatchSize']),
   list_characters: object({ characters: array(object(characterFields)), nextToken: nullableString }, ['characters']),
   generate_motion: batch, get_batch: batch, list_batch_motions: motions,
   get_character: object(characterFields, ['characterID']),

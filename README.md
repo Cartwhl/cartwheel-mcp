@@ -335,7 +335,7 @@ See [the Blender guide](examples/blender/README.md) for source files, rendering 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes 32 explicit core tools plus the viewer and preview choices. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes 33 explicit core tools plus the viewer and preview choices. `get_account` reports the connected key's organization's plan, monthly plus purchased credits, and batch limits; it does not expose API-key metadata or provide generation-cost quotes. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
 - `analyze_motion` reads bounded BVH assets only from approved Cartwheel production storage. API keys are never sent to asset storage. The optional game server is a separate loopback-only process without an API proxy.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.

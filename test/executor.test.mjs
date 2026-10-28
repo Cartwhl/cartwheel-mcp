@@ -12,7 +12,39 @@ test('stable CJS and ESM executor export shares the local catalog and preserves 
   assert.equal(require('@cartwhl/mcp-server/src/tool-executor/index.cjs').definitions, definitions);
   assert.equal(require('@cartwhl/mcp-server/src/tools.json'), require('@cartwhl/mcp-server/src/tool-executor/tools.json'));
   assert.equal(localDefinitions, definitions);
-  assert.equal(definitions.length, 32);
+  assert.equal(definitions.length, 33);
+});
+
+test('get_account reads the authenticated organization and exposes only validated account fields', async () => {
+  const tool = definitions.find(item => item.name === 'get_account');
+  assert.equal(tool.path, '/account');
+  assert.equal(tool.method, 'GET');
+  assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, required: [], additionalProperties: false });
+  assert.deepEqual(tool.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true });
+  const responses = [
+    { planType: 'team', currentCredits: 0, allowedNumBatches: 3, allowedNumBatchSize: 10 },
+    { planType: 'team', currentCredits: -1.25, allowedNumBatches: 3, allowedNumBatchSize: 10 },
+  ];
+  for (const account of responses) {
+    let calls = 0;
+    const output = await executeTool('get_account', {}, { apiKey: 'SECRET', requestJSON: async (url, init) => {
+      calls++;
+      assert.equal(new URL(url).pathname, '/account');
+      assert.equal(init.method, 'GET');
+      assert.equal(init.headers['x-api-key'], 'SECRET');
+      assert.equal(init.body, undefined);
+      return { ...account, apiKey: { projectKeyID: 'private-id', projectKeyLast4Digits: '1234', organizationID: 'private-org' }, unknown: 'private' };
+    } });
+    assert.deepEqual(output, account);
+    assert.equal(calls, 1);
+  }
+  for (const value of [
+    { currentCredits: 0, allowedNumBatches: 1, allowedNumBatchSize: 1 },
+    { planType: 'team', currentCredits: '1', allowedNumBatches: 1, allowedNumBatchSize: 1 },
+    { planType: 'team', currentCredits: Infinity, allowedNumBatches: 1, allowedNumBatchSize: 1 },
+    { planType: 'team', currentCredits: 1, allowedNumBatches: 1.5, allowedNumBatchSize: 1 },
+  ]) assert.throws(() => projectToolOutput('get_account', value), /Invalid upstream data/);
+  assert.throws(() => toolRequest('get_account', { organizationID: 'private-org' }), /Invalid tool arguments/);
 });
 
 test('canonical retarget classification, output safety and transport byte bounds are shared', async () => {

@@ -1,5 +1,24 @@
 [
   {
+    "name": "get_account",
+    "method": "GET",
+    "path": "/account",
+    "description": "Returns the plan and available monthly plus purchased credits for the organization associated with the connected API key, not a personal balance. Credits may be fractional or negative when using overdraft. allowedNumBatches is the maximum concurrent batches for the organization across all seats; allowedNumBatchSize is the maximum motions per batch. Plan and limits are not a quote of generation cost.",
+    "parameters": [],
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
     "name": "list_characters",
     "method": "GET",
     "path": "/characters",

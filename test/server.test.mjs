@@ -45,7 +45,7 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
     return Response.json({ items: [], nextToken: 'next' });
   });
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 34);
+  assert.equal(tools.length, 35);
   assert.equal(tools.find(tool => tool.name === 'generate_motion').annotations.readOnlyHint, false);
   const response = await client.callTool({ name: 'list_motions', arguments: { limit: 10, nextToken: 'a+b/=', sortAscending: false } });
   assert.equal(unpack(response).nextToken, 'next');
@@ -55,6 +55,25 @@ test('MCP discovery, authenticated pagination and path encoding', async t => {
   assert.equal(calls[0].options.redirect, 'error');
   await client.callTool({ name: 'get_motion', arguments: { motionID: 'mogen-job-example:123' } });
   assert.equal(calls[1].url.pathname, '/motion/mogen-job-example%3A123');
+});
+
+test('get_account is discovered and calls the API once without exposing API-key metadata', async t => {
+  const calls = [];
+  const client = await connect(t, async (url, options) => {
+    calls.push({ url, options });
+    return Response.json({ planType: 'team', currentCredits: -0.5, allowedNumBatches: 2,
+      allowedNumBatchSize: 8, apiKey: { projectKeyID: 'private-id', projectKeyLast4Digits: '1234', organizationID: 'private-org' } });
+  });
+  const tool = (await client.listTools()).tools.find(item => item.name === 'get_account');
+  assert.deepEqual(tool.inputSchema, { type: 'object', properties: {}, required: [], additionalProperties: false });
+  const result = await client.callTool({ name: 'get_account', arguments: {} });
+  assert.equal(result.isError, false);
+  assert.deepEqual(unpack(result), { planType: 'team', currentCredits: -0.5, allowedNumBatches: 2, allowedNumBatchSize: 8 });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url.pathname, '/account');
+  assert.equal(calls[0].options.method, 'GET');
+  assert.equal(calls[0].options.headers['x-api-key'], 'test-secret');
+  assert.doesNotMatch(JSON.stringify(result), /private-id|1234|private-org/);
 });
 
 test('generation submits the API body once and returns its batch ID', async t => {
