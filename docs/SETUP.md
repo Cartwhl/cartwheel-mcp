@@ -11,7 +11,7 @@ The video is an edited walkthrough captured during real browser interactions. It
 ## Create your account
 
 1. Visit [getcartwheel.com](https://getcartwheel.com).
-2. Select **Free trial** and review the current plans. Choose a plan that explicitly includes API access. The recorded example opens **Individual Pro**.
+2. Select **Free trial** and review the current plans. Choose a plan that explicitly includes API access: **Individual Basic**, **Individual Pro**, **Team Standard**, **Team Pro**, or **Team Scale**. The recording uses **Individual Pro** as an example.
 3. On **Create account**, use your email address or Google account. Enter your name and complete the sign-in information.
 4. Choose what you create, then select **Blender** under **Where will your motion end up?**
 5. Complete the registration, email verification, terms, and any checkout presented by Cartwheel. Review the current plan and trial conditions before confirming a subscription.

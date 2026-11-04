@@ -19,13 +19,13 @@ Cartwheel MCP connects your AI assistant to [Cartwheel](https://getcartwheel.com
 ## What you need
 
 - **Node.js 22 or newer** and Git.
-- **A Cartwheel production account with API access** and a project API key. Check the [current plans](https://getcartwheel.com/pricing); API access is not included in every plan.
+- **A Cartwheel production account with API access** and a project API key. API access is available on Individual Basic, Individual Pro, Team Standard, Team Pro, and Team Scale. Check the [current plans](https://getcartwheel.com/pricing) for credit and batch/concurrency limits.
 - **An MCP client that can launch local stdio servers.** This repository runs on your machine; it is not a hosted MCP URL.
 - **Blender only if you want to render the examples.** The MCP server itself does not require Blender.
 
 ## 1. Get a Cartwheel API key
 
-1. Open [Cartwheel](https://getcartwheel.com), choose an API-enabled plan (Individual Pro or Team Pro or Team Scale), and create your account. Complete email verification and any plan setup shown by the site.
+1. Open [Cartwheel](https://getcartwheel.com), choose an API-enabled plan (Individual Basic, Individual Pro, Team Standard, Team Pro, or Team Scale), and create your account. Complete email verification and any plan setup shown by the site.
 2. Open your Cartwheel dashboard and select **[API keys](https://app.getcartwheel.com/api-keys)**.
 3. Create or reveal a key for your workspace/project. Key management may require a workspace administrator.
 4. Copy the **secret key value**. The project ID and API Gateway key ID are not substitutes.
