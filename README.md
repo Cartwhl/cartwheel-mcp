@@ -124,6 +124,53 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 
 ## Tools
 
+### Character/motion preview
+
+`view_character_motion({ characterID?, motionID? })` previews an exact character
+and/or motion; omit the character for MHR and the motion for rest pose. A motion
+preview calls `get_motion` once for a fitting BVH and can run retarget processing.
+It never substitutes a character or retries automatically. `opening` does not
+confirm rendering; the embedded app reports readiness or failure.
+
+Clients advertising the standard `io.modelcontextprotocol/ui` extension with
+`text/html;profile=mcp-app` receive the shared MCP Apps wrapper at
+`ui://cartwheel/asset-viewer/v5.html`. Signed asset URLs stay in per-call
+`_meta.viewerUrl` and its fragment, outside model-visible content and the static
+resource. Other local clients receive a **private, expiring preview URL** in text
+and `structuredContent.previewUrl`, intentionally visible in the conversation.
+The server does not launch a browser. Both presentations use the same tool inputs.
+
+The wrapper uses only fixed trusted app origins: local stdio uses
+`https://app.getcartwheel.com`; hosted staging uses
+`https://app-staging.getcartwheel.com`. It embeds the existing frontend renderer,
+not a bundled 3D app. Production frontend compatibility must be verified separately;
+this source change does not deploy the production viewer. The reusable module is
+available through the existing package wildcard export at
+`@cartwhl/mcp-server/src/viewer.mjs` and executes through an injected authorized
+tool invoker. All six workflow resources remain registered alongside the UI.
+
+### Preview choices
+
+`show_previews({ items })` presents 1–20 existing character or motion choices in
+a horizontally scrolling image/video carousel. First retrieve accessible results
+using the list/search/batch tools, then supply short referenceable titles and the
+exact `characterID` and/or `motionID` (`jobID` on motion listings). Optional
+`media: { type: "image" | "video", url }` uses the returned `thumbnailURL`,
+`studioPreviewURL`, or `mp4URL`. Omit media if unavailable. Different variations
+must have different addressable motion IDs; do not invent IDs from variation numbers.
+
+The tool only presents supplied data; it does not fetch assets, verify access,
+generate, or retarget. **Open in viewer** sends a user message through the MCP Apps
+bridge, asking chat to call `view_character_motion` with the exact selected IDs.
+Acknowledging that message is not confirmation that the viewer opened. Hosts
+without text-message support show the choices but disable the CTA; clients without
+MCP Apps still receive titles and IDs as text.
+
+The resource `ui://cartwheel/asset-previews/v1.html` embeds the fixed environment's
+`/asset-previews.html` frontend. Media capabilities are delivered in per-call
+`_meta.previewItems`, not model-visible results or the static resource. The new
+frontend entry must be deployed before the tool is released to that environment.
+
 | Tool | What it does |
 | --- | --- |
 | `generate_motion` | Submit text prompts with model and export settings. **Consumes credits.** |
@@ -224,7 +271,7 @@ Edits are asynchronous and consume credits. Submit once and poll the existing jo
 
 Contacts are kinematic estimates. Authored signal/VFX timing is separate. Selected cycles, transitions, masks and character retargets still need visual review; switching to swing-edit is not a general repair for every motion/character combination. The [audit](examples/game/AUDIT.md) records the changes and limits.
 
-See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **32 tools and five workflows**.
+See the [game workflow](src/workflows/game.md), [runnable example](examples/game/README.md) and [asset provenance](examples/game/ASSETS.md). Reconnect the MCP after updating to discover **32 core tools plus the viewer, preview choices, and six workflows**.
 
 ## Comic 4: video to editable 3D
 
@@ -288,7 +335,7 @@ See [the Blender guide](examples/blender/README.md) for source files, rendering 
 ## Security and scope
 
 - Calls go to Cartwheel's **fixed public production API** using your own project key.
-- The server exposes 32 explicit tools. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
+- The server exposes 33 explicit core tools plus the viewer and preview choices. `get_account` reports the connected key's organization's plan, monthly plus purchased credits, and batch limits; it does not expose API-key metadata or provide generation-cost quotes. It has no generic HTTP proxy, database access, shell tools, account administration, billing, or deletion tools.
 - `analyze_motion` reads bounded BVH assets only from approved Cartwheel production storage. API keys are never sent to asset storage. The optional game server is a separate loopback-only process without an API proxy.
 - It does not expose callback registration, subscriber management, or impersonation fields.
 - Requests are validated, redirects are rejected, and failed requests are never automatically retried.
@@ -310,7 +357,7 @@ Read [SECURITY.md](SECURITY.md) for the trust boundary and reporting details.
 | HTTP 429 | Respect `retryAfter` and your plan's batch/concurrency limits. |
 | Generation times out | It may have been accepted. Check recent motions before submitting again. |
 | Server starts but prints nothing | Expected for stdio. Connect an MCP client to communicate with it. |
-| Hosted-only client asks for a URL | This version is local stdio. A GitHub repository URL is not an MCP endpoint. |
+| Hosted-only client asks for a URL | This package runs locally over stdio; a GitHub repository URL is not an MCP endpoint. Use a client that can launch local stdio servers. |
 
 ## Development
 
@@ -322,7 +369,11 @@ npm pack --dry-run
 
 Tests use the official MCP client, in-memory transports, and a real stdio subprocess. They validate tool and workflow discovery, prompt/resource retrieval, request schemas, authentication, pagination, character generation, model/image upload, auto-rig submission and status handling, motion generation submission, error redaction, route boundaries, and package contents without using real credentials or spending credits.
 
-`src/tools.json`, `src/game-tools.mjs`, `src/swing-edit-constraints.mjs`, `src/scene-tools.mjs` and `src/character-tools.mjs` contain the selected authenticated API contracts. Keep changes aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+[`@cartwhl/mcp-server/tool-executor`](src/tool-executor/README.md) exposes the reusable runtime, catalog and constraints from this existing package, with no separate workspace or publication. It supports CommonJS and ESM; existing package file subpaths remain supported. The npm 0.7.0 release predates this export: consumers need an immutable source commit until a published version includes it. Keep contracts aligned with the [public Cartwheel API documentation](https://api-docs.getcartwheel.com). The local server is self-contained and does not require any other Cartwheel repository. Three.js supplies BVH loading, transforms and animation utilities; there is no local model runtime.
+
+The separate [hosted MCP service](https://github.com/Cartwhl/cartwheel-mcp-hosted)
+reuses this executor behind OAuth/HTTP. Its [reviewer overview](https://github.com/Cartwhl/cartwheel-mcp-hosted/blob/main/docs/OVERVIEW.md)
+covers example flows, companion repos and hosted capability/verification status.
 
 ## Distribution
 

@@ -41,12 +41,23 @@ test('invalid editor constraints and hidden nested fields never reach a service'
 test('jobs are checked against their scene slot before reading or applying; unfinished jobs cannot apply', async t => {
   const calls = [];
   let jobs = [{ jobID: 'edit-1', status: 'GENERATING' }];
-  const client = await connect(t, async (url, options) => { calls.push([url.pathname, options.method]); return Response.json(url.pathname.endsWith('/motionEdits') ? { jobs } : { applied: true }); });
+  const privateFields = { s3KeyBvh: 'private-storage-key', apiKey: 'private-test-key', sceneSettings: { token: 'Bearer private' } };
+  const timeline = [{ jobID: 'motion-1', appliedMotionEditJobID: 'edit-1', bvhURL: 'https://assets.getcartwheel.com/motion.bvh' }];
+  const expected = { sceneID: slot.sceneID, objects: { character: { objectID: 'character-1', timeline } } };
+  const client = await connect(t, async (url, options) => {
+    calls.push([url.pathname, options.method]);
+    return Response.json(url.pathname.endsWith('/motionEdits') ? { jobs } : {
+      ...expected, ...privateFields, objects: { character: { objectID: 'character-1', ...privateFields,
+        timeline: timeline.map(item => ({ ...item, ...privateFields })) } },
+    });
+  });
   assert.equal((await client.callTool({ name: 'get_motion_edit', arguments: { ...slot, jobID: 'other-slot' } })).isError, true);
   assert.equal((await client.callTool({ name: 'apply_motion_edit', arguments: { ...slot, jobID: 'edit-1' } })).isError, true);
   assert.ok(calls.every(([path, method]) => path.endsWith('/motionEdits') && method === 'GET'));
   jobs = [{ jobID: 'edit-1', status: 'COMPLETED' }];
-  assert.equal((await client.callTool({ name: 'apply_motion_edit', arguments: { ...slot, jobID: 'edit-1' } })).isError, false);
+  const applied = await client.callTool({ name: 'apply_motion_edit', arguments: { ...slot, jobID: 'edit-1' } });
+  assert.equal(applied.isError, false);
+  assert.deepEqual(unpack(applied), expected);
   assert.deepEqual(calls.at(-1), ['/scenes/scene-test/objects/character/0/motionEdits/edit-1/apply', 'POST']);
 });
 

@@ -4,6 +4,8 @@ import { access } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/server.mjs';
+import { viewerResourceUri } from '../src/viewer.mjs';
+import { previewsResourceUri } from '../src/previews.mjs';
 import { workflowUri, workflowPrompt, comicWorkflowUri, comicWorkflowPrompt, gameWorkflowUri, gameWorkflowPrompt, swingEditWorkflowUri, swingEditWorkflowPrompt, characterWorkflowUri, characterWorkflowPrompt, robotWorkflowUri, robotWorkflowPrompt } from '../src/workflows.mjs';
 
 async function connect(t) {
@@ -22,7 +24,7 @@ test('Blender workflow is discoverable and packaged files exist', async t => {
   assert.ok(capabilities.resources);
   assert.match(client.getInstructions(), /grounded_blender_scene/);
   assert.deepEqual((await client.listPrompts()).prompts.map(p => p.name), [workflowPrompt,comicWorkflowPrompt,gameWorkflowPrompt,swingEditWorkflowPrompt,characterWorkflowPrompt,robotWorkflowPrompt]);
-  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri,robotWorkflowUri]);
+  assert.deepEqual((await client.listResources()).resources.map(r => r.uri), [workflowUri,comicWorkflowUri,gameWorkflowUri,swingEditWorkflowUri,characterWorkflowUri,robotWorkflowUri,viewerResourceUri,previewsResourceUri]);
   const response = await client.readResource({ uri: workflowUri });
   const guide = response.contents[0].text;
   for (const term of ['Gaussian', 'source ankle rotation', 'verify_motion.py', 'render_examples.py', 'Generation consumes credits']) assert.ok(guide.includes(term), term);

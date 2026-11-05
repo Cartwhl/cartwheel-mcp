@@ -4,6 +4,11 @@
   "description": "Generate 3D animation with Cartwheel from MCP clients.",
   "type": "module",
   "license": "MIT",
+  "exports": {
+    "./tool-executor": "./src/tool-executor/index.cjs",
+    "./src/tools.json": "./src/tool-executor/tools.json",
+    "./*": "./*"
+  },
   "engines": {
     "node": ">=22"
   },

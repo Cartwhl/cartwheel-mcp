@@ -9,8 +9,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 test('the public tool surface cannot change accounts, callbacks, or arbitrary routes', () => {
-  assert.equal(definitions.length, 32);
-  assert.deepEqual(definitions.filter(t => !t.annotations.readOnlyHint).map(t => t.name), ['generate_motion','create_media_upload','generate_motion_from_video','create_scene','loop_motion','stitch_motions','edit_motion','edit_key_poses','apply_motion_edit','set_scene_character','save_key_poses','export_scene','generate_character_batch','prepare_character_generation','submit_character_generation','create_character_upload','submit_character_upload']);
+  assert.equal(definitions.length, 33);
+  assert.deepEqual(definitions.filter(t => !t.annotations.readOnlyHint).map(t => t.name), ['generate_motion','get_motion','create_media_upload','generate_motion_from_video','create_scene','loop_motion','stitch_motions','edit_motion','edit_key_poses','apply_motion_edit','set_scene_character','save_key_poses','export_scene','generate_character_batch','prepare_character_generation','submit_character_generation','create_character_upload','submit_character_upload']);
   for (const tool of definitions) {
     if (tool.handler) assert.equal(tool.handler, 'analyze_motion');
     else { assert.ok(tool.path.startsWith('/')); assert.ok(['GET', 'POST', 'PUT'].includes(tool.method)); }
@@ -35,11 +35,18 @@ test('only the production origin receives credentials', async t => {
 
 test('package allowlist includes workflow sources and excludes secrets and rendered outputs', t => {
   const manifest=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+  assert.equal(manifest.workspaces, undefined);
+  assert.equal(manifest.dependencies['@cartwhl/tool-executor'], undefined);
+  assert.equal(manifest.scripts['check:executor-package'], undefined);
   assert.deepEqual(manifest.files,['src','LICENSE','README.md','examples/blender/*.py','examples/blender/README.md','examples/blender/assets/*.bvh','examples/comic4/*.mjs','examples/comic4/*.py','examples/comic4/README.md','examples/characters/*.mjs','examples/characters/README.md','examples/game/*.mjs','examples/game/*.html','examples/game/*.css','examples/game/*.json','examples/game/README.md','examples/game/ASSETS.md','examples/game/assets/*.glb','examples/game/assets/*.bvh','examples/game/assets/*.json','examples/game/*.py','examples/game/AUDIT.md','examples/game/assets/MHR-LICENSE.txt']);
   const cache = mkdtempSync(join(tmpdir(), 'cartwheel-package-test-'));
   t.after(() => rmSync(cache, { recursive: true, force: true }));
   const [pack]=JSON.parse(execFileSync('npm',['pack','--dry-run','--json','--ignore-scripts'],{cwd:new URL('../',import.meta.url),encoding:'utf8',env:{...process.env,npm_config_cache:cache}}));
-  for(const file of pack.files) assert.ok(/^(src\/|LICENSE$|README.md$|package.json$|examples\/blender\/[^/]+\.py$|examples\/blender\/README\.md$|examples\/blender\/assets\/[^/]+\.bvh$|examples\/comic4\/[^/]+\.(mjs|py)$|examples\/comic4\/README\.md$|examples\/characters\/[^/]+\.mjs$|examples\/characters\/README\.md$|examples\/game\/[^/]+\.(mjs|py|html|css|json)$|examples\/game\/(README|ASSETS|AUDIT)\.md$|examples\/game\/assets\/[^/]+\.(bvh|glb|json)$|examples\/game\/assets\/MHR-LICENSE\.txt$)/.test(file.path),file.path);
+  for(const file of pack.files) assert.ok(/^(src\/|LICENSE$|README.md$|package.json$|docs\/HOSTED\.md$|examples\/blender\/[^/]+\.py$|examples\/blender\/README\.md$|examples\/blender\/assets\/[^/]+\.bvh$|examples\/comic4\/[^/]+\.(mjs|py)$|examples\/comic4\/README\.md$|examples\/characters\/[^/]+\.mjs$|examples\/characters\/README\.md$|examples\/game\/[^/]+\.(mjs|py|html|css|json)$|examples\/game\/(README|ASSETS|AUDIT)\.md$|examples\/game\/assets\/[^/]+\.(bvh|glb|json)$|examples\/game\/assets\/MHR-LICENSE\.txt$)/.test(file.path),file.path);
+  for (const file of pack.files) assert.doesNotMatch(file.path, /hosted|oauth|credential/i);
+  for (const dependency of Object.keys(manifest.dependencies)) assert.doesNotMatch(dependency, /aws-sdk|smithy|jose|raw-body/);
+  assert.deepEqual(pack.files.filter(file => file.path.startsWith('src/tool-executor/')).map(file => file.path).sort(),
+    ['README.md','character-tools.cjs','game-tools.cjs','index.cjs','input-contract.cjs','output-contract.cjs','response-errors.cjs','scene-tools.cjs','swing-edit-constraints.cjs','tools.json','video-import.cjs','video-source.cjs'].map(file => `src/tool-executor/${file}`).sort());
   for (const path of ['src/workflows/blender.md','src/workflows/comic4.md','examples/comic4/upload-video.mjs','examples/comic4/import_capture.py','examples/comic4/mhr_knees.py','examples/blender/motion.py','examples/blender/verify_motion.py','examples/blender/assets/dance_0.bvh']) assert.ok(pack.files.some(file => file.path === path), path);
   for (const path of ['src/swing-edit-constraints.mjs','src/workflows/swing-edit.md','examples/game/swing-edit-skeleton.json','examples/game/assets/run.swing-edit-poses.json','src/character-tools.mjs','src/workflows/characters.md','examples/characters/upload-asset.mjs','examples/characters/README.md','src/workflows/game.md','src/game-tools.mjs','src/motion-analysis.mjs','src/motion-download.mjs','examples/game/serve.mjs','examples/game/prepare-game.mjs','examples/game/sample-poses.mjs','examples/game/assets/character.glb','examples/game/assets/run.motion.json']) assert.ok(pack.files.some(file => file.path === path), path);
   for (const file of pack.files.filter(f => f.path.startsWith('examples/game/assets/') && f.path.endsWith('.json'))) {
