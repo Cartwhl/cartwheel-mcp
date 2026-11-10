@@ -46,8 +46,8 @@ const workflows = [
     description: 'Find a robot character, solve motion against its physical model, and export qpos joint angles or mesh formats in the robot\'s native frame.',
     file: 'robots.md', directory: 'robots', argument: 'robot' },
   { uri: retargetingWorkflowUri, prompt: retargetingWorkflowPrompt, name: 'retargeting_workflow',
-    title: 'Cartwheel → character retargeting and rig setup',
-    description: 'How motion is retargeted onto a character, how to set a model up so it retargets well, what its mapping holds, and how to work out what is wrong with a retarget.',
+    title: 'Cartwheel → character retargeting (body and face) and rig setup',
+    description: 'How motion is retargeted onto a character (body bones and face morphs), how to set a model up so it retargets well, what its mapping holds, and how to work out what is wrong with a retarget.',
     file: 'retargeting.md', directory: 'characters', argument: 'character' },
 ].map(w => ({ ...w, text: `${readFileSync(new URL(`./workflows/${w.file}`, import.meta.url), 'utf8')}\nInstalled example directory: ${fileURLToPath(new URL(`../examples/${w.directory}/`, import.meta.url))}\n` }));
 const invalid = message => new McpError(ErrorCode.InvalidParams, message);

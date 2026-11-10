@@ -67,6 +67,33 @@ A character's mapping (its Cartographer config, `config.json`) is what the retar
 
 When a rigged model is uploaded without a config, Cartwheel recognizes the skeleton and builds the mapping itself; when the upload includes a config, that mapping is used. An unrigged mesh is auto-rigged with Cartwheel's own skeleton, so it needs no mapping. Users review and edit a mapping in **Cartographer**, which shows each bone's role and chain, previews motion on the character as they edit, and saves the config with the character. Do not write a mapping for a user from guesses about their bone names; recognition and Cartographer are the way to produce one.
 
+## Facial retargeting
+
+Body retargeting moves bones. Facial performance is carried by **morph targets** (blendshapes) instead, so a face is retargeted by mapping morphs, not bones. Only characters whose meshes have morph targets can have their face retargeted; for any other character, Cartographer's Face mode stays unavailable.
+
+Cartwheel's facial performance (for example from video capture) is authored on an MHR head with a fixed set of source morphs, the **driver morphs**. The character's own morphs are the **driven morphs**. A face mapping says, for each driver morph, which driven morphs it moves and by how much:
+
+- **Morph Map**: driver morph to driven morphs, each with an **amount** (1 is full strength). One driver can drive several driven morphs, and a driven morph can be shared by several drivers when sharing is on.
+- **Jaw joint**: a jaw that opens with a bone rather than a morph can be driven too. With a jaw bone set, the bone's rotation axes appear as driven targets, with amounts in degrees or scene units.
+- **Head bone**: the bone the face rides on, so the face can be framed and followed.
+- **Locked rows** are kept as they are when the map is solved again or cleared. **Excluded** driven morphs are never used by the solver.
+
+Cartographer builds the map in steps, in its Face mode:
+
+1. **Fit Mask** fits a face mask, a set of landmarks, to the character's head, so the solver knows where each region of the source face lies on the character.
+2. **Automap** solves the Morph Map from that fit: for each driver morph, the combination of driven morphs that best reproduces its deformation on the character. It replaces every row that is not locked.
+3. **Adjust Landmarks** is where the user corrects landmarks, sets the head and jaw joints, and edits the Morph Map row by row before previewing motion on the face.
+
+The face mapping is saved with the rest of the character's Cartographer config, under its `face` key (`src_shapes` for the Morph Map, plus `head_bone`, `jaw_bone`, `lock_mappings`, `excluded_tgt_shapes` and the fitted mask).
+
+When a face looks wrong, reason from the map:
+
+- **A part of the face never moves.** Its driver morphs are unmapped, or the motion has no facial data for that part. Many clips move only the jaw; check the motion before changing the map.
+- **An expression appears on the wrong side.** The Morph Map maps a left driver to a right driven morph, or the character's morphs are named from the viewer's side rather than the character's.
+- **An expression is too strong or too weak.** Its amount is off, or several drivers stack onto one shared driven morph.
+- **The jaw opens wrongly or not at all.** The jaw bone is wrong or unset, or the jaw axis amounts are off, or the character's jaw is a morph and the jaw bone should be None.
+- **Automap gives a poor map.** Fit Mask has not run, or the mask fits the head badly; correct the landmarks and run both steps again, locking rows already fixed by hand.
+
 ## Working out what is wrong
 
 Diagnose from the process above rather than matching symptoms to fixes:
