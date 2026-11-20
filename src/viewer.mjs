@@ -162,6 +162,7 @@ export function viewerResource(environment = 'production') {
     text: `<!doctype html><html><head><meta name="referrer" content="no-referrer"><style>:root{color-scheme:light dark;background-color:Canvas;color:CanvasText}html,body{margin:0;font:14px system-ui}body{display:flex;flex-direction:column;max-height:inherit}html[data-fill] body{height:100%;overflow:hidden}#viewer-slot{height:380px;flex:0 1 380px;min-height:0}#viewer-slot:empty{display:none}html[data-fill] #viewer-slot{flex:1 1 0}iframe{display:block;width:100%;height:100%;border:0}p{margin:0;padding:16px;flex:0 1 auto;min-height:0;overflow:auto;box-sizing:border-box}</style></head><body><p id="status" role="status">Loading Cartwheel preview…</p><div id="viewer-slot"></div><script>
 let frame, current, initialized = false, capabilities = {}, nextID = 2;
 let seen = new Set(), terminal = false, followupSent = false, latest;
+let expectedInput, completeInputs = 0;
 let readinessTimer;
 const clearReadinessTimer = () => { clearTimeout(readinessTimer); readinessTimer = undefined; };
 const slot = document.getElementById('viewer-slot');
@@ -278,14 +279,31 @@ window.addEventListener('message', event => {
     if (initialized) { updateTheme(message.params); updateLayout(message.params); notifySize(); }
     return;
   }
-  if (message.method === 'ui/notifications/tool-input') { reset(); notifySize(); return; }
+  if (message.method === 'ui/notifications/tool-input') {
+    reset();
+    const args = message.params?.arguments;
+    if (args && typeof args === 'object' && !Array.isArray(args) &&
+        Object.entries(args).every(([key,value]) => ['characterID','motionID','batchID'].includes(key) &&
+          typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) &&
+        !(Object.hasOwn(args,'batchID') && (!Object.hasOwn(args,'motionID') || Object.hasOwn(args,'characterID')))) {
+      expectedInput = { characterID: args.characterID ?? 'char-upload-MHR', ...(args.motionID ? {motionID:args.motionID} : {}),
+        ...(args.batchID ? {batchID:args.batchID} : {}) };
+      completeInputs++;
+    } else expectedInput = undefined;
+    notifySize(); return;
+  }
   if (message.method !== 'ui/notifications/tool-result') return;
-  reset();
   try {
-    const url = new URL(message.params?._meta?.viewerUrl);
-    if (message.params?.isError || url.origin !== '${origin}' || url.pathname !== '/asset-viewer.html' || url.search || url.username || url.password) throw new Error();
+    const params = message.params;
+    const url = new URL(params?._meta?.viewerUrl);
+    if (params?.isError || url.origin !== '${origin}' || url.pathname !== '/asset-viewer.html' || url.search || url.username || url.password) throw new Error();
     const data = message.params.structuredContent;
     if (data?.status !== 'opening' || typeof data.characterID !== 'string' || typeof data.characterName !== 'string') throw new Error();
+    // Only reused wrappers get ordering protection; single-call and result-only hosts stay compatible.
+    if (completeInputs >= 2 && expectedInput &&
+        (data.characterID !== expectedInput.characterID || (data.motionID ?? undefined) !== expectedInput.motionID ||
+         (data.batchID ?? undefined) !== expectedInput.batchID)) return;
+    reset();
     current = {characterID:data.characterID,characterName:data.characterName};
     for (const key of ['motionID','motionName']) if (typeof data[key] === 'string') current[key] = data[key];
     if (typeof data.batchID === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(data.batchID) &&
