@@ -126,15 +126,21 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 
 ### Character/motion preview
 
-`view_character_motion({ characterID?, motionID? })` previews an exact character
-and/or motion; omit the character for MHR and the motion for rest pose. A motion
-preview calls `get_motion` once for a fitting BVH and can run retarget processing.
-It never substitutes a character or retries automatically. `opening` does not
-confirm rendering; the embedded app reports readiness or failure.
+`view_character_motion({ characterID?, motionID?, retarget? })` plays the saved
+motion on its matching built-in rig or on the specified character if compatible.
+Set `retarget: true` when the user asks to convert the motion for the specified
+character, or once after a confirmed original-rig mismatch if the user requested
+that exact pair. It requires both IDs and is unavailable with `batchID`. Never
+retarget if the user asked to keep the original or said not to retarget. Confirm
+any credit spend before dispatch, and never retry a retarget request. The viewer
+reports status; the host handles any follow-up.
+Omit the motion for a rest pose (defaults to MHR without a character). The
+viewer never substitutes a requested character or retries automatically.
+`opening` does not confirm rendering; the app reports readiness or failure.
 
 Clients advertising the standard `io.modelcontextprotocol/ui` extension with
 `text/html;profile=mcp-app` receive the shared MCP Apps wrapper at
-`ui://cartwheel/asset-viewer/v5.html`. Signed asset URLs stay in per-call
+`ui://cartwheel/asset-viewer/v6.html`. Signed asset URLs stay in per-call
 `_meta.viewerUrl` and its fragment, outside model-visible content and the static
 resource. Other local clients receive a **private, expiring preview URL** in text
 and `structuredContent.previewUrl`, intentionally visible in the conversation.

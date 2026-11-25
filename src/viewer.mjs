@@ -1,15 +1,17 @@
 import { safeAsset } from './tool-executor/index.cjs';
 
-export const viewerResourceUri = 'ui://cartwheel/asset-viewer/v5.html';
+export const viewerResourceUri = 'ui://cartwheel/asset-viewer/v6.html';
 export const viewerTool = {
   name: 'view_character_motion',
-  description: 'Open one specific existing character or motion asset, embedded in MCP Apps clients or as a private, expiring preview link in other clients. Use the exact characterID and/or motionID returned by Cartwheel; do not guess IDs, construct asset URLs, or substitute a different asset if opening fails—report the failure. To preview all original MHR performers from a completed video capture together, provide batchID and motionID, without characterID. This reads the known batch only (up to 10 pages of 10 records), requires every requested performer’s original BVH and identity, preserves capture indices and shared placement, and never retargets or generates. Otherwise, for a selected motion, calls get_motion once with the requested character to obtain its fitting BVH; this can run retarget processing. Omit the character for MHR; omit the motion for rest pose. Each call is self-contained and the host controls panel reuse. Opening does not confirm rendering; the app reports readiness or failure. Never generates a new motion, retries automatically or substitutes a character. Do not first request the same character-targeted get_motion just to open this preview.',
+  description: 'Open one specific existing character or motion asset, embedded in MCP Apps clients or as a private, expiring preview link in other clients. Use exact IDs returned by Cartwheel; do not guess IDs, construct asset URLs, or substitute another asset. Default to the saved motion: omit characterID for its matching built-in rig, or supply characterID to use that character if compatible. If the user explicitly requested this motion on this character and the original preview reports a confirmed rig mismatch, make one follow-up with the same IDs and retarget=true. A user can also explicitly request retargeting. Do not retarget if the user asked to keep the original or said not to retarget. Never use this fallback for an inferred character, another kind of failure, or an already-retargeted preview. Confirm any credit spend before dispatch; never retry the retarget request. For all original MHR performers from a completed capture, provide batchID and motionID without characterID; this reads only the known batch (up to 10 pages of 10 records), preserves capture indices and placement, and never retargets. Omit motionID for rest pose. Opening does not confirm rendering.',
   inputSchema: { type: 'object', properties: {
     characterID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
     motionID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
     batchID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
+    retarget: { type: 'boolean', description: 'Explicitly retarget motionID onto characterID. Requires both IDs and cannot be used with batchID.' },
   }, additionalProperties: false,
-    allOf: [{ if: { required: ['batchID'] }, then: { required: ['motionID'], not: { required: ['characterID'] } } }] },
+    allOf: [{ if: { required: ['batchID'] }, then: { required: ['motionID'], not: { anyOf: [{ required: ['characterID'] }, { required: ['retarget'] }] } } },
+      { if: { properties: { retarget: { const: true } }, required: ['retarget'] }, then: { required: ['motionID', 'characterID'], not: { required: ['batchID'] } } }] },
   outputSchema: { type: 'object', properties: {
     status: { type: 'string', enum: ['opening', 'assets_unavailable'] },
     characterID: { type: 'string' }, motionID: { type: 'string' },
@@ -19,7 +21,7 @@ export const viewerTool = {
     actorIDs: { type: 'array', minItems: 1, maxItems: 4, uniqueItems: true,
       items: { type: 'string', pattern: '^capture-[0-3]$' } },
     previewUrl: { type: 'string', description: 'Private, expiring link; returned only for clients without MCP Apps.' },
-  }, required: ['status', 'characterID', 'characterName', 'retryable'], additionalProperties: false },
+  }, required: ['status', 'retryable'], additionalProperties: false },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   _meta: { ui: { resourceUri: viewerResourceUri } },
 };
@@ -38,9 +40,11 @@ export function supportsViewerApp(capabilities) {
 // Invocation is authorized by the caller: API key locally, request-scoped OAuth in hosted.
 export async function invokeViewer(args, { environment = 'production', invokeTool, app = true } = {}) {
   if (!args || typeof args !== 'object' || Array.isArray(args) ||
-      Object.entries(args).some(([key, value]) => !['characterID', 'motionID', 'batchID'].includes(key) ||
-        typeof value !== 'string' || /[\x00-\x1f\x7f]/.test(value) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) ||
-      (Object.hasOwn(args, 'batchID') && (!Object.hasOwn(args, 'motionID') || Object.hasOwn(args, 'characterID')))) {
+      Object.entries(args).some(([key, value]) => key === 'retarget' ? typeof value !== 'boolean' :
+        !['characterID', 'motionID', 'batchID'].includes(key) || typeof value !== 'string' ||
+        /[\x00-\x1f\x7f]/.test(value) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) ||
+      (Object.hasOwn(args, 'batchID') && (!Object.hasOwn(args, 'motionID') || Object.hasOwn(args, 'characterID') || Object.hasOwn(args, 'retarget'))) ||
+      (args.retarget === true && (!args.motionID || !args.characterID))) {
     return { isError: true, content: [{ type: 'text', text: JSON.stringify({
       code: 'invalid_request', message: 'Invalid connector request.', retryable: false,
     }) }] };
@@ -48,6 +52,7 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
   const url = new URL('/asset-viewer.html', appOrigin(environment));
   if (args.batchID) return invokeCaptureViewer(args, { url, invokeTool, app });
   const characterID = args.characterID ?? 'char-upload-MHR';
+  const autoRig = Boolean(args.motionID && !args.characterID);
   const character = characterID !== 'char-upload-MHR'
     ? await invokeTool('get_character', { characterID }) : undefined;
   if (character?.isError) return character;
@@ -58,7 +63,7 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
   };
   const characterName = label(characterData?.characterName, character ? args.characterID : 'MHR');
   const motionName = args.motionID;
-  const identity = { characterID, characterName,
+  const identity = { ...(!autoRig ? { characterID, characterName } : {}),
     ...(motionName ? { motionID: args.motionID, motionName } : {}), retryable: false };
   const unavailable = () => {
     const structuredContent = { ...identity, status: 'assets_unavailable' };
@@ -66,27 +71,30 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
       message: 'Preview assets are not available. Keep the requested character and do not retry automatically.' }) }] };
   };
   const meshURL = characterData?.baseGlbURL ?? (characterData?.fileExtension === 'glb' ? characterData.characterFileURL : undefined);
-  if (character && (characterData?.characterID !== characterID || characterData.uploadStatus !== 'COMPLETE' || !safeAsset(meshURL))) return unavailable();
-  // Validate the character deliverable before starting target-specific processing.
+  if (character && (characterData?.characterID !== characterID || characterData.uploadStatus !== 'COMPLETE' ||
+      !safeViewerAsset(meshURL, environment))) return unavailable();
+  // An unqualified read returns the saved BVH without conversion.
   const motion = args.motionID ? await invokeTool('get_motion', {
-    motionID: args.motionID, characterID, downloadType: 'bvh',
+    motionID: args.motionID, ...(args.retarget ? { characterID, downloadType: 'bvh' } : {}),
   }) : undefined;
   if (motion?.isError) return motion;
   const motionData = motion?.structuredContent;
   if (motion && (motionData?.status !== 'COMPLETED' ||
       motionData.motionID !== args.motionID || (motionData.jobID && motionData.jobID !== args.motionID) ||
-      !safeAsset(motionData.bvhURL))) return unavailable();
-  const fragment = new URLSearchParams({ characterName });
+      !safeViewerAsset(motionData.bvhURL, environment))) return unavailable();
+  const fragment = new URLSearchParams();
+  if (!autoRig) fragment.set('characterName', characterName);
   if (character) fragment.set('meshUrl', meshURL);
   if (motion) {
     fragment.set('bvhUrl', motionData.bvhURL); fragment.set('motionName', motionName);
-    fragment.set('retargetedMotion', 'true');
+    if (args.retarget) fragment.set('retargetedMotion', 'true');
+    else if (autoRig) fragment.set('autoRig', 'true');
   }
   url.hash = fragment.toString();
   if (url.hash.length > 32768) return unavailable();
   const structuredContent = { ...identity, status: 'opening', ...(!app ? { previewUrl: url.href } : {}) };
   return { isError: false, structuredContent,
-    content: [{ type: 'text', text: `Opening preview of ${characterName}${motionName ? ` with ${motionName}` : ' in its rest pose'}. Rendering is not yet confirmed.${!app ? ` [Private, expiring preview link](${url.href})` : ''}` }],
+    content: [{ type: 'text', text: `Opening ${args.retarget ? `retargeted preview on ${characterName}` : motionName ? 'motion preview' : `rest pose of ${characterName}`}. Rendering is not yet confirmed.${!app ? ` [Private, expiring preview link](${url.href})` : ''}` }],
     // Temporary asset capabilities are for the UI, never embedded in a shared UI resource.
     _meta: { viewerUrl: url.href },
   };
@@ -147,11 +155,13 @@ async function invokeCaptureViewer({ batchID, motionID }, { url, invokeTool, app
 }
 
 // Match the frontend fragment boundary as well as the shared API asset boundary.
-function safeViewerAsset(value) {
+function safeViewerAsset(value, environment) {
   if (typeof value !== 'string' || /[\x00-\x1f\x7f]/.test(value) || !safeAsset(value)) return false;
   const url = new URL(value);
-  return !url.hash && (/^resources(?:-[a-z0-9-]+)?\.getcartwheel\.com$/.test(url.hostname) ||
-    /(?:^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname));
+  const allowedResources = environment
+    ? url.hostname === `resources${environment === 'staging' ? '-staging' : ''}.getcartwheel.com`
+    : /^resources(?:-[a-z0-9-]+)?\.getcartwheel\.com$/.test(url.hostname);
+  return !url.hash && (allowedResources || /(?:^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname));
 }
 
 export function viewerResource(environment = 'production') {
@@ -162,6 +172,7 @@ export function viewerResource(environment = 'production') {
     text: `<!doctype html><html><head><meta name="referrer" content="no-referrer"><style>:root{color-scheme:light dark;background-color:Canvas;color:CanvasText}html,body{margin:0;font:14px system-ui}body{display:flex;flex-direction:column;max-height:inherit}html[data-fill] body{height:100%;overflow:hidden}#viewer-slot{height:380px;flex:0 1 380px;min-height:0}#viewer-slot:empty{display:none}html[data-fill] #viewer-slot{flex:1 1 0}iframe{display:block;width:100%;height:100%;border:0}p{margin:0;padding:16px;flex:0 1 auto;min-height:0;overflow:auto;box-sizing:border-box}</style></head><body><p id="status" role="status">Loading Cartwheel preview…</p><div id="viewer-slot"></div><script>
 let frame, current, initialized = false, capabilities = {}, nextID = 2;
 let seen = new Set(), terminal = false, followupSent = false, latest;
+let originalCharacterPreview = false;
 let expectedInput, completeInputs = 0;
 let readinessTimer;
 const clearReadinessTimer = () => { clearTimeout(readinessTimer); readinessTimer = undefined; };
@@ -211,7 +222,10 @@ const updateTheme = context => {
 };
 preferredScheme.addEventListener('change', applyTheme);
 applyTheme();
-const texts = {loading:'Opening preview; rendering is not yet confirmed.',ready:'Preview is ready.',incompatible_rig:'Preview failed: the motion and character rigs are incompatible. Keep the requested character; choose a compatible existing motion. Do not retry automatically.',asset_load_failed:'Preview failed: an asset could not be loaded. Keep the requested character. Do not retry automatically or claim the preview is showing.'};
+const statusTexts = {loading:'Opening preview; rendering is not yet confirmed.',ready:'Preview is ready.',incompatible_rig:'Preview failed: incompatible rigs.',asset_load_failed:'Preview failed: an asset could not be loaded.'};
+const instructions = {loading:statusTexts.loading,ready:statusTexts.ready,
+  incompatible_rig:'Preview failed: incompatible rigs. Keep the requested assets; do not retry automatically.',
+  asset_load_failed:'Preview failed: keep the requested assets. Do not retry automatically or claim the preview is showing.'};
 const rpc = (method, params) => {
   const id = nextID++;
   // Responses (including method-not-found and host denial) are consumed once.
@@ -221,11 +235,14 @@ const rpc = (method, params) => {
 const publish = () => {
   if (!initialized || !latest || seen.has(latest)) return;
   seen.add(latest);
-  const content = [{type:'text',text:texts[latest]}];
-  rpc('ui/update-model-context', {content,structuredContent:{...current,status:latest}});
+  const eligible = latest === 'incompatible_rig' && originalCharacterPreview;
+  const content = [{type:'text',text:eligible ?
+    'The original motion does not fit the selected character. If the user explicitly requested this exact pair, make one view_character_motion follow-up with the same IDs and retarget:true unless the user asked to keep the original or said not to retarget. Confirm any credit spend before dispatch. Never retry the retarget request.' :
+    instructions[latest]}];
+  rpc('ui/update-model-context', {content,structuredContent:{...current,status:latest,...(eligible ? {originalCharacterMismatch:true} : {})}});
   if (['incompatible_rig','asset_load_failed'].includes(latest) && !followupSent && capabilities.message?.text) {
     followupSent = true;
-    rpc('ui/message', {role:'user',content:[{type:'text',text:JSON.stringify({...current,status:latest,message:texts[latest]})}]});
+    rpc('ui/message', {role:'user',content:[{type:'text',text:JSON.stringify({...current,status:latest,message:statusTexts[latest]})}]});
   }
 };
 const report = value => {
@@ -233,13 +250,14 @@ const report = value => {
   latest = value;
   if (['incompatible_rig','asset_load_failed'].includes(value)) terminal = true;
   if (value === 'ready' || terminal) clearReadinessTimer();
-  status.textContent = texts[value]; status.hidden = value === 'ready';
+  status.textContent = statusTexts[value]; status.hidden = value === 'ready';
   publish(); notifySize();
 };
 const reset = () => {
   clearReadinessTimer();
   if (frame) frame.remove();
   frame = undefined; current = undefined; latest = undefined;
+  originalCharacterPreview = false;
   seen = new Set(); terminal = false; followupSent = false;
   status.hidden = false; status.textContent = 'Loading Cartwheel preview…';
 };
@@ -263,7 +281,7 @@ window.addEventListener('message', event => {
   if (frame && event.source === frame.contentWindow && event.origin === '${origin}') {
     const data = event.data;
     if (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 2 &&
-        data.type === 'cartwheel/asset-viewer-status' && typeof data.status === 'string' && Object.hasOwn(texts,data.status)) report(data.status);
+        data.type === 'cartwheel/asset-viewer-status' && typeof data.status === 'string' && Object.hasOwn(statusTexts,data.status)) report(data.status);
     return;
   }
   if (event.source !== window.parent || event.data?.jsonrpc !== '2.0') return;
@@ -283,11 +301,14 @@ window.addEventListener('message', event => {
     reset();
     const args = message.params?.arguments;
     if (args && typeof args === 'object' && !Array.isArray(args) &&
-        Object.entries(args).every(([key,value]) => ['characterID','motionID','batchID'].includes(key) &&
-          typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) &&
-        !(Object.hasOwn(args,'batchID') && (!Object.hasOwn(args,'motionID') || Object.hasOwn(args,'characterID')))) {
-      expectedInput = { characterID: args.characterID ?? 'char-upload-MHR', ...(args.motionID ? {motionID:args.motionID} : {}),
-        ...(args.batchID ? {batchID:args.batchID} : {}) };
+        Object.entries(args).every(([key,value]) => key === 'retarget' ? typeof value === 'boolean' :
+          ['characterID','motionID','batchID'].includes(key) && typeof value === 'string' &&
+          /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(value)) &&
+        !(Object.hasOwn(args,'batchID') && (!Object.hasOwn(args,'motionID') || Object.hasOwn(args,'characterID') || Object.hasOwn(args,'retarget'))) &&
+        !(args.retarget === true && (!args.motionID || !args.characterID))) {
+      const autoRig = Boolean(args.motionID && !args.characterID && !args.batchID);
+      expectedInput = { characterID: autoRig ? undefined : args.characterID ?? 'char-upload-MHR',
+        motionID: args.motionID, batchID: args.batchID, autoRig, retarget: args.retarget === true };
       completeInputs++;
     } else expectedInput = undefined;
     notifySize(); return;
@@ -297,14 +318,20 @@ window.addEventListener('message', event => {
     const params = message.params;
     const url = new URL(params?._meta?.viewerUrl);
     if (params?.isError || url.origin !== '${origin}' || url.pathname !== '/asset-viewer.html' || url.search || url.username || url.password) throw new Error();
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const autoRig = fragment.get('autoRig') === 'true';
+    const retarget = fragment.get('retargetedMotion') === 'true';
     const data = message.params.structuredContent;
-    if (data?.status !== 'opening' || typeof data.characterID !== 'string' || typeof data.characterName !== 'string') throw new Error();
+    if (data?.status !== 'opening') throw new Error();
     // Only reused wrappers get ordering protection; single-call and result-only hosts stay compatible.
     if (completeInputs >= 2 && expectedInput &&
-        (data.characterID !== expectedInput.characterID || (data.motionID ?? undefined) !== expectedInput.motionID ||
-         (data.batchID ?? undefined) !== expectedInput.batchID)) return;
+        (data.characterID !== expectedInput.characterID || data.motionID !== expectedInput.motionID ||
+         data.batchID !== expectedInput.batchID || autoRig !== expectedInput.autoRig || retarget !== expectedInput.retarget)) return;
+    if (autoRig ? (data.characterID !== undefined || data.characterName !== undefined || typeof data.motionID !== 'string') :
+        (typeof data.characterID !== 'string' || typeof data.characterName !== 'string')) throw new Error();
     reset();
-    current = {characterID:data.characterID,characterName:data.characterName};
+    current = {...(data.characterID ? {characterID:data.characterID} : {}),
+      ...(data.characterName ? {characterName:data.characterName} : {})};
     for (const key of ['motionID','motionName']) if (typeof data[key] === 'string') current[key] = data[key];
     if (typeof data.batchID === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/.test(data.batchID) &&
         Number.isInteger(data.actorCount) && data.actorCount >= 1 && data.actorCount <= 4 &&
@@ -313,6 +340,10 @@ window.addEventListener('message', event => {
       current.batchID = data.batchID; current.actorCount = data.actorCount; current.actorIDs = data.actorIDs;
     }
     for (const key of ['variationID','outputIndex']) if (Number.isSafeInteger(data[key]) && data[key] >= 0) current[key] = data[key];
+    originalCharacterPreview = Boolean(data.characterID && data.motionID && !data.batchID && !autoRig && !retarget &&
+      !fragment.has('actors') && fragment.get('previewMotion') !== 'true' && fragment.has('bvhUrl') &&
+      (!expectedInput || (expectedInput.characterID === data.characterID &&
+        expectedInput.motionID === data.motionID && !expectedInput.batchID && !expectedInput.retarget)));
     // A new browsing context per result: old WindowProxy events cannot match.
     frame = document.createElement('iframe');
     frame.title = 'Cartwheel character and motion viewer'; frame.referrerPolicy = 'no-referrer';
@@ -325,9 +356,14 @@ window.addEventListener('message', event => {
       if (frame === instance && latest !== 'ready' && !terminal) report('asset_load_failed');
     }, 30000);
     frame.src = url.href; slot.appendChild(frame); report('loading');
-  } catch { reset(); status.textContent = 'Preview unavailable. Reopen it from the conversation.'; notifySize(); }
+  } catch {
+    // Error results may omit identity; do not let an uncorrelated result
+    // replace the current preview after a tracked tool input.
+    if (completeInputs >= 2 && frame) return;
+    reset(); status.textContent = 'Preview unavailable. Reopen it from the conversation.'; notifySize();
+  }
 });
-window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',appInfo:{name:'Cartwheel viewer',version:'0.5.0'},appCapabilities:{availableDisplayModes:['fullscreen']}}}, '*');
+window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',appInfo:{name:'Cartwheel viewer',version:'0.6.0'},appCapabilities:{availableDisplayModes:['fullscreen']}}}, '*');
 </script></body></html>`,
   };
 }

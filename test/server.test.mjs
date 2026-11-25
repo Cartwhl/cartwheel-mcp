@@ -248,7 +248,7 @@ test('local viewer negotiates MCP Apps and otherwise returns a private expiring 
     assert.deepEqual(resource._meta.ui.csp.frameDomains, ['https://app.getcartwheel.com']);
     assert.equal(resource._meta['openai/ui'], undefined);
     assert.doesNotMatch(resource.text, /X-Amz-Signature|private-glb|private-bvh|app-staging/);
-    const result = await client.callTool({ name: viewerTool.name, arguments: { characterID: 'character-1', motionID: 'motion-1' } });
+    const result = await client.callTool({ name: viewerTool.name, arguments: { characterID: 'character-1', motionID: 'motion-1', retarget: true } });
     assert.equal(result.isError, false);
     assert.equal(calls.length, 2);
     assert.equal(calls[1].searchParams.get('characterID'), 'character-1');
@@ -274,6 +274,47 @@ test('local viewer negotiates MCP Apps and otherwise returns a private expiring 
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: ['text/html'] } } }), false);
   assert.equal(supportsViewerApp({ extensions: { 'io.modelcontextprotocol/ui': { mimeTypes: 'text/html;profile=mcp-app' } } }), false);
   assert.throws(() => viewerResource('https://evil.example'), /Viewer unavailable/);
+});
+
+test('motion preview defaults to matching rig and only explicit retarget processes against supplied character', async () => {
+  const calls = [];
+  const invokeTool = async (name, args) => {
+    calls.push([name, args]);
+    return name === 'get_character' ? { structuredContent: {
+      characterID: args.characterID, characterName: 'Target', uploadStatus: 'COMPLETE',
+      baseGlbURL: 'https://bucket.s3.amazonaws.com/target.glb',
+    } } : { structuredContent: { motionID: args.motionID, status: 'COMPLETED',
+      bvhURL: 'https://bucket.s3.amazonaws.com/motion.bvh' } };
+  };
+  let result = await invokeViewer({ motionID: 'motion-1', characterID: 'target-1' }, { invokeTool });
+  assert.deepEqual(calls.map(([name]) => name), ['get_character', 'get_motion']);
+  assert.deepEqual(calls[1][1], { motionID: 'motion-1' });
+  let fragment = new URLSearchParams(new URL(result._meta.viewerUrl).hash.slice(1));
+  assert.deepEqual([...fragment.keys()], ['characterName', 'meshUrl', 'bvhUrl', 'motionName']);
+  assert.equal(fragment.has('autoRig'), false);
+  assert.equal(fragment.has('retargetedMotion'), false);
+
+  calls.length = 0;
+  result = await invokeViewer({ motionID: 'motion-1', characterID: 'target-1', retarget: true }, { invokeTool });
+  assert.deepEqual(calls.map(([name]) => name), ['get_character', 'get_motion']);
+  assert.deepEqual(calls[1][1], { motionID: 'motion-1', characterID: 'target-1', downloadType: 'bvh' });
+  fragment = new URLSearchParams(new URL(result._meta.viewerUrl).hash.slice(1));
+  assert.equal(fragment.get('retargetedMotion'), 'true');
+  assert.equal(fragment.has('autoRig'), false);
+
+  calls.length = 0;
+  result = await invokeViewer({ motionID: 'motion-1' }, { invokeTool });
+  assert.deepEqual(calls.map(([name]) => name), ['get_motion']);
+  assert.deepEqual(calls[0][1], { motionID: 'motion-1' });
+  fragment = new URLSearchParams(new URL(result._meta.viewerUrl).hash.slice(1));
+  assert.deepEqual([...fragment.keys()], ['bvhUrl', 'motionName', 'autoRig']);
+  assert.equal(result.structuredContent.characterID, undefined);
+  assert.equal(result.structuredContent.characterName, undefined);
+  calls.length = 0;
+  result = await invokeViewer({}, { invokeTool });
+  assert.deepEqual(calls, []);
+  assert.equal(result.structuredContent.characterID, 'char-upload-MHR');
+  assert.equal(result.structuredContent.characterName, 'MHR');
 });
 
 const captureArgs = { batchID: 'batch-capture', motionID: 'motion-capture' };
