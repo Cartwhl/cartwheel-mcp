@@ -24,11 +24,11 @@ function harness() {
     clearTimeout: id => timers.delete(id),
   });
   const host = message => receive({ source: parent, data: { jsonrpc: '2.0', ...message } });
-  const input = (characterID, motionID) => host({ method: 'ui/notifications/tool-input',
-    params: { arguments: { ...(characterID ? { characterID } : {}), motionID } } });
-  const result = (motionID) => host({ method: 'ui/notifications/tool-result', params: {
-    structuredContent: { status: 'opening', characterID: 'char-upload-MHR', characterName: 'MHR', motionID, motionName: motionID },
-    _meta: { viewerUrl: `https://app-staging.getcartwheel.com/asset-viewer.html#characterName=MHR&motionName=${motionID}` },
+  const input = (characterID, motionID, retarget) => host({ method: 'ui/notifications/tool-input',
+    params: { arguments: { ...(characterID ? { characterID } : {}), motionID, ...(retarget ? { retarget } : {}) } } });
+  const result = (motionID, characterID, retarget) => host({ method: 'ui/notifications/tool-result', params: {
+    structuredContent: { status: 'opening', motionID, motionName: motionID, ...(characterID ? { characterID, characterName: 'MHR' } : {}) },
+    _meta: { viewerUrl: `https://app-staging.getcartwheel.com/asset-viewer.html#bvhUrl=https%3A%2F%2Fbucket.s3.amazonaws.com%2Fmotion.bvh&motionName=${motionID}${characterID ? '&characterName=MHR' : '&autoRig=true'}${retarget ? '&retargetedMotion=true' : ''}` },
   } });
   const report = (frame, value) => receive({ source: frame.contentWindow, origin: 'https://app-staging.getcartwheel.com',
     data: { type: 'cartwheel/asset-viewer-status', status: value } });
@@ -65,6 +65,34 @@ test('reused wrapper rejects late mismatched results without replacing the curre
   assert.equal(h.frames.at(-1), finalA);
   assert.equal(contexts().at(-1).params.structuredContent.motionID, 'motion-2001');
   assert.equal(contexts().at(-1).params.structuredContent.status, 'ready');
+});
+
+test('reused wrapper cannot replace an original preview with a late retarget result for the same IDs', () => {
+  const h = harness();
+  h.host({ id: 1, result: { hostCapabilities: {}, hostContext: {} } });
+  const character = 'char-upload-MHR', motion = 'motion-1';
+  h.input(character, motion, true);
+  h.input(character, motion);
+  h.result(motion, character);
+  assert.equal(h.frames.length, 1);
+  h.result(motion, character, true);
+  h.result(motion);
+  assert.equal(h.frames.length, 1, 'late retarget and automatic-rig results cannot replace the selected preview');
+  assert.equal(h.frames[0].removed, undefined);
+});
+
+test('model-facing failure guidance keeps visible status concise and distinguishes matching rig from opt-in retarget', () => {
+  const h = harness();
+  h.host({ id: 1, result: { hostCapabilities: { message: { text: true } }, hostContext: {} } });
+  h.input(undefined, 'motion-1');
+  h.result('motion-1');
+  const frame = h.frames.at(-1);
+  h.report(frame, 'incompatible_rig');
+  assert.equal(h.messages.filter(message => message.method === 'ui/update-model-context').at(-1).params.content[0].text,
+    'Preview failed: the motion and character rigs are incompatible. Keep the requested assets; preview the motion on its matching rig or explicitly request retargeting onto a compatible character. Do not retry automatically.');
+  const followup = JSON.parse(h.messages.find(message => message.method === 'ui/message').params.content[0].text);
+  assert.doesNotMatch(followup.message, /retry|requested|retarget/i);
+  assert.equal(followup.motionID, 'motion-1');
 });
 
 test('one-input lifecycle and result-only viewer remain usable', () => {
