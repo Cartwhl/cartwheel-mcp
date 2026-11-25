@@ -82,18 +82,34 @@ test('reused wrapper cannot replace an original preview with a late retarget res
   assert.equal(h.frames[0].removed, undefined);
 });
 
-test('model-facing failure guidance keeps visible status concise and distinguishes matching rig from opt-in retarget', () => {
+test('exact original character mismatch signals eligibility without simulating user consent or retrying', () => {
   const h = harness();
   h.host({ id: 1, result: { hostCapabilities: { message: { text: true } }, hostContext: {} } });
-  h.input(undefined, 'motion-1');
-  h.result('motion-1');
+  h.input('char-1', 'motion-1');
+  h.result('motion-1', 'char-1');
   const frame = h.frames.at(-1);
   h.report(frame, 'incompatible_rig');
-  assert.equal(h.messages.filter(message => message.method === 'ui/update-model-context').at(-1).params.content[0].text,
-    'Preview failed: the motion and character rigs are incompatible. Keep the requested assets; preview the motion on its matching rig or explicitly request retargeting onto a compatible character. Do not retry automatically.');
-  const followup = JSON.parse(h.messages.find(message => message.method === 'ui/message').params.content[0].text);
-  assert.doesNotMatch(followup.message, /retry|requested|retarget/i);
-  assert.equal(followup.motionID, 'motion-1');
+  const modelContext = h.messages.filter(message => message.method === 'ui/update-model-context').at(-1).params;
+  assert.match(modelContext.content[0].text, /requested this exact pair.*one view_character_motion follow-up.*not to retarget/);
+  const statusMessage = JSON.parse(h.messages.find(message => message.method === 'ui/message').params.content[0].text);
+  assert.equal(statusMessage.message, 'Preview failed: incompatible rigs.');
+  assert.doesNotMatch(statusMessage.message, /retarget|consent|request/i);
+  assert.equal(modelContext.structuredContent.originalCharacterMismatch, true);
+  assert.equal(statusMessage.originalCharacterMismatch, undefined);
+  h.report(frame, 'incompatible_rig');
+  assert.equal(h.messages.filter(message => message.method === 'ui/update-model-context').length, 2,
+    'duplicate terminal status is published only once');
+});
+
+test('no-target and previously retargeted mismatches do not signal eligibility', () => {
+  for (const retarget of [false, true]) {
+    const h = harness();
+    h.host({ id: 1, result: { hostCapabilities: {}, hostContext: {} } });
+    h.input(retarget ? 'char-1' : undefined, 'motion-1', retarget);
+    h.result('motion-1', retarget ? 'char-1' : undefined, retarget);
+    h.report(h.frames.at(-1), 'incompatible_rig');
+    assert.notEqual(h.messages.filter(message => message.method === 'ui/update-model-context').at(-1).params.structuredContent.originalCharacterMismatch, true);
+  }
 });
 
 test('one-input lifecycle and result-only viewer remain usable', () => {

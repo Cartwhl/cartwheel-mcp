@@ -128,8 +128,12 @@ For `list_batch_motions`, pass both `batchID` and `limit` (for example, `10`). R
 
 `view_character_motion({ characterID?, motionID?, retarget? })` plays the saved
 motion on its matching built-in rig or on the specified character if compatible.
-Set `retarget: true` only when the user asks to convert the motion for the
-specified character; this requires both IDs and is unavailable with `batchID`.
+Set `retarget: true` when the user asks to convert the motion for the specified
+character, or once after a confirmed original-rig mismatch if the user requested
+that exact pair. It requires both IDs and is unavailable with `batchID`. Never
+retarget if the user asked to keep the original or said not to retarget. Confirm
+any credit spend before dispatch, and never retry a retarget request. The viewer
+reports status; the host handles any follow-up.
 Omit the motion for a rest pose (defaults to MHR without a character). The
 viewer never substitutes a requested character or retries automatically.
 `opening` does not confirm rendering; the app reports readiness or failure.

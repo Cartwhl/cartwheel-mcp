@@ -3,7 +3,7 @@ import { safeAsset } from './tool-executor/index.cjs';
 export const viewerResourceUri = 'ui://cartwheel/asset-viewer/v6.html';
 export const viewerTool = {
   name: 'view_character_motion',
-  description: 'Open one specific existing character or motion asset, embedded in MCP Apps clients or as a private, expiring preview link in other clients. Use exact IDs returned by Cartwheel; do not guess IDs, construct asset URLs, or substitute another asset. Play the saved motion without converting it: omit characterID to use its matching built-in rig, or supply characterID to use that character if compatible. Set retarget=true only when the user explicitly asks to retarget the motion onto the supplied character. To preview all original MHR performers from a completed video capture together, provide batchID and motionID without characterID; this reads the known batch only (up to 10 pages of 10 records), preserves capture indices/shared placement, and never retargets. Omit motionID for rest pose. Opening does not confirm rendering; report failures and never retry automatically.',
+  description: 'Open one specific existing character or motion asset, embedded in MCP Apps clients or as a private, expiring preview link in other clients. Use exact IDs returned by Cartwheel; do not guess IDs, construct asset URLs, or substitute another asset. Default to the saved motion: omit characterID for its matching built-in rig, or supply characterID to use that character if compatible. If the user explicitly requested this motion on this character and the original preview reports a confirmed rig mismatch, make one follow-up with the same IDs and retarget=true. A user can also explicitly request retargeting. Do not retarget if the user asked to keep the original or said not to retarget. Never use this fallback for an inferred character, another kind of failure, or an already-retargeted preview. Confirm any credit spend before dispatch; never retry the retarget request. For all original MHR performers from a completed capture, provide batchID and motionID without characterID; this reads only the known batch (up to 10 pages of 10 records), preserves capture indices and placement, and never retargets. Omit motionID for rest pose. Opening does not confirm rendering.',
   inputSchema: { type: 'object', properties: {
     characterID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
     motionID: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,255}$' },
@@ -172,6 +172,7 @@ export function viewerResource(environment = 'production') {
     text: `<!doctype html><html><head><meta name="referrer" content="no-referrer"><style>:root{color-scheme:light dark;background-color:Canvas;color:CanvasText}html,body{margin:0;font:14px system-ui}body{display:flex;flex-direction:column;max-height:inherit}html[data-fill] body{height:100%;overflow:hidden}#viewer-slot{height:380px;flex:0 1 380px;min-height:0}#viewer-slot:empty{display:none}html[data-fill] #viewer-slot{flex:1 1 0}iframe{display:block;width:100%;height:100%;border:0}p{margin:0;padding:16px;flex:0 1 auto;min-height:0;overflow:auto;box-sizing:border-box}</style></head><body><p id="status" role="status">Loading Cartwheel preview…</p><div id="viewer-slot"></div><script>
 let frame, current, initialized = false, capabilities = {}, nextID = 2;
 let seen = new Set(), terminal = false, followupSent = false, latest;
+let originalCharacterPreview = false;
 let expectedInput, completeInputs = 0;
 let readinessTimer;
 const clearReadinessTimer = () => { clearTimeout(readinessTimer); readinessTimer = undefined; };
@@ -223,7 +224,7 @@ preferredScheme.addEventListener('change', applyTheme);
 applyTheme();
 const statusTexts = {loading:'Opening preview; rendering is not yet confirmed.',ready:'Preview is ready.',incompatible_rig:'Preview failed: incompatible rigs.',asset_load_failed:'Preview failed: an asset could not be loaded.'};
 const instructions = {loading:statusTexts.loading,ready:statusTexts.ready,
-  incompatible_rig:'Preview failed: the motion and character rigs are incompatible. Keep the requested assets; preview the motion on its matching rig or explicitly request retargeting onto a compatible character. Do not retry automatically.',
+  incompatible_rig:'Preview failed: incompatible rigs. Keep the requested assets; do not retry automatically.',
   asset_load_failed:'Preview failed: keep the requested assets. Do not retry automatically or claim the preview is showing.'};
 const rpc = (method, params) => {
   const id = nextID++;
@@ -234,8 +235,11 @@ const rpc = (method, params) => {
 const publish = () => {
   if (!initialized || !latest || seen.has(latest)) return;
   seen.add(latest);
-  const content = [{type:'text',text:instructions[latest]}];
-  rpc('ui/update-model-context', {content,structuredContent:{...current,status:latest}});
+  const eligible = latest === 'incompatible_rig' && originalCharacterPreview;
+  const content = [{type:'text',text:eligible ?
+    'The original motion does not fit the selected character. If the user explicitly requested this exact pair, make one view_character_motion follow-up with the same IDs and retarget:true unless the user asked to keep the original or said not to retarget. Confirm any credit spend before dispatch. Never retry the retarget request.' :
+    instructions[latest]}];
+  rpc('ui/update-model-context', {content,structuredContent:{...current,status:latest,...(eligible ? {originalCharacterMismatch:true} : {})}});
   if (['incompatible_rig','asset_load_failed'].includes(latest) && !followupSent && capabilities.message?.text) {
     followupSent = true;
     rpc('ui/message', {role:'user',content:[{type:'text',text:JSON.stringify({...current,status:latest,message:statusTexts[latest]})}]});
@@ -253,6 +257,7 @@ const reset = () => {
   clearReadinessTimer();
   if (frame) frame.remove();
   frame = undefined; current = undefined; latest = undefined;
+  originalCharacterPreview = false;
   seen = new Set(); terminal = false; followupSent = false;
   status.hidden = false; status.textContent = 'Loading Cartwheel preview…';
 };
@@ -335,6 +340,10 @@ window.addEventListener('message', event => {
       current.batchID = data.batchID; current.actorCount = data.actorCount; current.actorIDs = data.actorIDs;
     }
     for (const key of ['variationID','outputIndex']) if (Number.isSafeInteger(data[key]) && data[key] >= 0) current[key] = data[key];
+    originalCharacterPreview = Boolean(data.characterID && data.motionID && !data.batchID && !autoRig && !retarget &&
+      !fragment.has('actors') && fragment.get('previewMotion') !== 'true' && fragment.has('bvhUrl') &&
+      (!expectedInput || (expectedInput.characterID === data.characterID &&
+        expectedInput.motionID === data.motionID && !expectedInput.batchID && !expectedInput.retarget)));
     // A new browsing context per result: old WindowProxy events cannot match.
     frame = document.createElement('iframe');
     frame.title = 'Cartwheel character and motion viewer'; frame.referrerPolicy = 'no-referrer';
