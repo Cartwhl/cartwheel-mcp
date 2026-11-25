@@ -47,6 +47,7 @@ test('reused wrapper rejects late mismatched results without replacing the curre
   const contexts = () => h.messages.filter(message => message.method === 'ui/update-model-context');
   assert.equal(contexts().at(-1).params.structuredContent.motionID, 'motion-2002');
   h.result('motion-2001');
+  h.host({ method: 'ui/notifications/tool-result', params: { isError: true } });
   assert.equal(h.frames.at(-1), b);
   assert.equal(b.removed, undefined);
   assert.equal(contexts().at(-1).params.structuredContent.motionID, 'motion-2002');

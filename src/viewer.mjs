@@ -71,7 +71,8 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
       message: 'Preview assets are not available. Keep the requested character and do not retry automatically.' }) }] };
   };
   const meshURL = characterData?.baseGlbURL ?? (characterData?.fileExtension === 'glb' ? characterData.characterFileURL : undefined);
-  if (character && (characterData?.characterID !== characterID || characterData.uploadStatus !== 'COMPLETE' || !safeAsset(meshURL))) return unavailable();
+  if (character && (characterData?.characterID !== characterID || characterData.uploadStatus !== 'COMPLETE' ||
+      !safeViewerAsset(meshURL, environment))) return unavailable();
   // An unqualified read returns the saved BVH without conversion.
   const motion = args.motionID ? await invokeTool('get_motion', {
     motionID: args.motionID, ...(args.retarget ? { characterID, downloadType: 'bvh' } : {}),
@@ -80,7 +81,7 @@ export async function invokeViewer(args, { environment = 'production', invokeToo
   const motionData = motion?.structuredContent;
   if (motion && (motionData?.status !== 'COMPLETED' ||
       motionData.motionID !== args.motionID || (motionData.jobID && motionData.jobID !== args.motionID) ||
-      !safeAsset(motionData.bvhURL))) return unavailable();
+      !safeViewerAsset(motionData.bvhURL, environment))) return unavailable();
   const fragment = new URLSearchParams();
   if (!autoRig) fragment.set('characterName', characterName);
   if (character) fragment.set('meshUrl', meshURL);
@@ -154,11 +155,13 @@ async function invokeCaptureViewer({ batchID, motionID }, { url, invokeTool, app
 }
 
 // Match the frontend fragment boundary as well as the shared API asset boundary.
-function safeViewerAsset(value) {
+function safeViewerAsset(value, environment) {
   if (typeof value !== 'string' || /[\x00-\x1f\x7f]/.test(value) || !safeAsset(value)) return false;
   const url = new URL(value);
-  return !url.hash && (/^resources(?:-[a-z0-9-]+)?\.getcartwheel\.com$/.test(url.hostname) ||
-    /(?:^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname));
+  const allowedResources = environment
+    ? url.hostname === `resources${environment === 'staging' ? '-staging' : ''}.getcartwheel.com`
+    : /^resources(?:-[a-z0-9-]+)?\.getcartwheel\.com$/.test(url.hostname);
+  return !url.hash && (allowedResources || /(?:^|\.)s3(?:[.-][a-z0-9-]+)?\.amazonaws\.com$/.test(url.hostname));
 }
 
 export function viewerResource(environment = 'production') {
@@ -344,7 +347,12 @@ window.addEventListener('message', event => {
       if (frame === instance && latest !== 'ready' && !terminal) report('asset_load_failed');
     }, 30000);
     frame.src = url.href; slot.appendChild(frame); report('loading');
-  } catch { reset(); status.textContent = 'Preview unavailable. Reopen it from the conversation.'; notifySize(); }
+  } catch {
+    // Error results may omit identity; do not let an uncorrelated result
+    // replace the current preview after a tracked tool input.
+    if (completeInputs >= 2 && frame) return;
+    reset(); status.textContent = 'Preview unavailable. Reopen it from the conversation.'; notifySize();
+  }
 });
 window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',appInfo:{name:'Cartwheel viewer',version:'0.6.0'},appCapabilities:{availableDisplayModes:['fullscreen']}}}, '*');
 </script></body></html>`,
